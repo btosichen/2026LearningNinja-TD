@@ -16,14 +16,17 @@
         .btn { transition: all 0.2s; }
         .btn:hover { transform: scale(1.05); }
         .btn:active { transform: scale(0.95); }
+
+        /* ── 忍者選單：縮小 + 透明背景（不遮路徑） ── */
         .ninja-deploy-btn {
-            cursor: pointer; border: 3px solid transparent; min-width: 76px;
+            cursor: pointer; border: 3px solid transparent;
+            min-width: 62px;               /* scale 0.8 ≈ 76*0.8 */
             position: relative; overflow: hidden; user-select: none;
             transition: all 0.15s;
-            transform: scale(0.8); /* 【三】縮小尺寸 */
-            opacity: 0.9; /* 【三】透明背景 */
+            transform: scale(0.8);         /* 【三-2】縮小0.8 */
+            transform-origin: bottom center;
         }
-        .ninja-deploy-btn:hover:not(.on-cooldown) { transform: translateY(-4px) scale(0.8); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .ninja-deploy-btn:hover:not(.on-cooldown) { transform: scale(0.88) translateY(-4px); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
         .ninja-deploy-btn.on-cooldown { opacity: 0.65; cursor: not-allowed; }
         .cd-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
@@ -35,22 +38,41 @@
             color: #fff; font-size: 14px; font-weight: 900; pointer-events: none;
             text-shadow: 0 1px 4px rgba(0,0,0,0.7);
         }
+
+        /* ── 分配滑桿樣式 ── */
+        .stat-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 4px; outline: none; cursor: pointer; }
+        .stat-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; cursor: pointer; }
+        .slider-programming { background: linear-gradient(to right, #ef4444, #fca5a5); }
+        .slider-programming::-webkit-slider-thumb { background: #ef4444; }
+        .slider-data { background: linear-gradient(to right, #3b82f6, #93c5fd); }
+        .slider-data::-webkit-slider-thumb { background: #3b82f6; }
+        .slider-project { background: linear-gradient(to right, #22c55e, #86efac); }
+        .slider-project::-webkit-slider-thumb { background: #22c55e; }
+        .slider-system { background: linear-gradient(to right, #eab308, #fde68a); }
+        .slider-system::-webkit-slider-thumb { background: #eab308; }
+        .slider-logic { background: linear-gradient(to right, #a855f7, #d8b4fe); }
+        .slider-logic::-webkit-slider-thumb { background: #a855f7; }
+
+        /* ── 城堡HP條 ── */
+        #castle-hp-bar {
+            position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; align-items: center;
+            background: rgba(0,0,0,0.55); border-radius: 10px;
+            padding: 4px 12px; pointer-events: none; z-index: 20;
+            font-size: 11px; font-weight: 900; color: white; white-space: nowrap;
+        }
+        .hp-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .hp-bar-bg { width: 110px; height: 10px; background: #374151; border-radius: 5px; overflow: hidden; }
+        .hp-bar-fill { height: 100%; border-radius: 5px; transition: width 0.2s; }
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        /* 新增：控制按鈕樣式 */
-        .control-btn {
-            background: rgba(31,41,55,0.95);
-            color: white;
-            font-weight: 900;
-            transition: all 0.2s;
-        }
-        .control-btn:hover { background: rgba(17,24,39,0.95); transform: scale(1.1); }
     </style>
 </head>
 <body>
 
-<!-- 1️⃣ 登入畫面（完全保留） -->
+
+<!-- 1️⃣ 登入畫面（原始保留） -->
 <div id="login-screen" class="screen active flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
     <div class="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-md w-full mx-4 border-b-8 border-indigo-700">
         <h1 class="text-4xl font-black text-indigo-700 mb-2">🥷 忍界學習守衛戰</h1>
@@ -66,112 +88,257 @@
     </div>
 </div>
 
-<!-- 2️⃣ 數據面板（新增分配點數區域） -->
-<div id="dashboard-screen" class="screen flex-col items-center justify-start py-10 bg-gray-50">
+
+<!-- 2️⃣ 數據面板（新增能力分配滑桿區） -->
+<div id="dashboard-screen" class="screen flex-col items-center justify-start py-6 bg-gray-50">
     <div class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-4xl mx-4 flex flex-col items-center">
         <h2 class="text-3xl font-black text-gray-800 mb-2">🥷 忍之國：出戰英雄陣容</h2>
         <p id="ninja-title" class="text-xl text-indigo-600 font-bold mb-4">Lv.1 君主 - 玩家</p>
-        
-        <div class="w-full max-w-md mb-6 relative">
+        <div class="w-full max-w-md mb-4 relative">
             <canvas id="radar-chart"></canvas>
         </div>
-        
-        <!-- 原有5大忍者網格（完全保留） -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 w-full text-center text-sm px-4">
-            <div class="bg-red-50 p-3 rounded-xl border-2 border-red-200 shadow-sm"><p class="text-red-600 font-bold text-lg mb-1">💻 程式忍</p><p id="stat-programming" class="text-2xl font-black text-gray-700">0</p></div>
-            <div class="bg-blue-50 p-3 rounded-xl border-2 border-blue-200 shadow-sm"><p class="text-blue-600 font-bold text-lg mb-1">📊 資料忍</p><p id="stat-data" class="text-2xl font-black text-gray-700">0</p></div>
-            <div class="bg-green-50 p-3 rounded-xl border-2 border-green-200 shadow-sm"><p class="text-green-600 font-bold text-lg mb-1">🎯 企劃忍</p><p id="stat-project" class="text-2xl font-black text-gray-700">0</p></div>
-            <div class="bg-yellow-50 p-3 rounded-xl border-2 border-yellow-200 shadow-sm"><p class="text-yellow-600 font-bold text-lg mb-1">⚙️ 系統忍</p><p id="stat-system" class="text-2xl font-black text-gray-700">0</p></div>
-            <div class="bg-purple-50 p-3 rounded-xl border-2 border-purple-200 shadow-sm"><p class="text-purple-600 font-bold text-lg mb-1">🔮 解題忍</p><p id="stat-logic" class="text-2xl font-black text-gray-700">0</p></div>
-        </div>
 
-        <!-- 【一】新增：100點自由分配點數區 -->
-        <div class="w-full max-w-md mt-6 bg-indigo-50 rounded-2xl p-6 border border-indigo-200">
-            <h3 class="font-black text-xl mb-4 text-center text-indigo-700">🎁 100點自由分配點數</h3>
-            <div id="allocation-section" class="space-y-5"></div>
-            <div class="mt-6 text-center">
-                <span class="text-sm text-gray-500">剩餘點數</span>
-                <span id="remaining-points" class="text-4xl font-black text-indigo-600 ml-3">100</span>
+        <!-- 原始能力顯示 -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 w-full text-center text-sm px-4">
+            <div class="bg-red-50 p-3 rounded-xl border-2 border-red-200 shadow-sm">
+                <p class="text-red-600 font-bold text-base mb-1">💻 程式忍</p>
+                <p id="stat-programming" class="text-xl font-black text-gray-700">0</p>
+                <p class="text-[10px] text-gray-400">基礎</p>
+            </div>
+            <div class="bg-blue-50 p-3 rounded-xl border-2 border-blue-200 shadow-sm">
+                <p class="text-blue-600 font-bold text-base mb-1">📊 資料忍</p>
+                <p id="stat-data" class="text-xl font-black text-gray-700">0</p>
+                <p class="text-[10px] text-gray-400">基礎</p>
+            </div>
+            <div class="bg-green-50 p-3 rounded-xl border-2 border-green-200 shadow-sm">
+                <p class="text-green-600 font-bold text-base mb-1">🎯 企劃忍</p>
+                <p id="stat-project" class="text-xl font-black text-gray-700">0</p>
+                <p class="text-[10px] text-gray-400">基礎</p>
+            </div>
+            <div class="bg-yellow-50 p-3 rounded-xl border-2 border-yellow-200 shadow-sm">
+                <p class="text-yellow-600 font-bold text-base mb-1">⚙️ 系統忍</p>
+                <p id="stat-system" class="text-xl font-black text-gray-700">0</p>
+                <p class="text-[10px] text-gray-400">基礎</p>
+            </div>
+            <div class="bg-purple-50 p-3 rounded-xl border-2 border-purple-200 shadow-sm">
+                <p class="text-purple-600 font-bold text-base mb-1">🔮 解題忍</p>
+                <p id="stat-logic" class="text-xl font-black text-gray-700">0</p>
+                <p class="text-[10px] text-gray-400">基礎</p>
             </div>
         </div>
 
-        <button onclick="startGame()" class="btn bg-red-600 text-white font-black py-4 px-12 rounded-full text-2xl shadow-xl hover:bg-red-500 animate-pulse border-4 border-red-300 mt-8">
+        <!-- ========================================================
+             【一】自由分配點數區（新增）
+             - 100點自由分配，5個 slider 對應五種能力
+             - 總和不得超過100，即時更新
+             ======================================================== -->
+        <div class="w-full px-4 mb-4 bg-indigo-50 rounded-2xl p-4 border-2 border-indigo-200">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-black text-indigo-700 text-base">⚡ 自由強化點數分配</h3>
+                <!-- 剩餘點數顯示 -->
+                <span class="text-sm font-black">
+                    剩餘：<span id="bonus-remaining" class="text-indigo-600 text-lg">100</span> / 100
+                </span>
+            </div>
+            <!-- 五個 slider（程式/資料/企劃/系統/解題） -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- 程式忍滑桿 -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-red-600 w-16 shrink-0">💻 程式</span>
+                    <input type="range" id="slider-programming" class="stat-slider slider-programming flex-1" min="0" max="100" value="0" oninput="onSliderChange('programming', this.value)">
+                    <span id="bonus-programming" class="text-sm font-black text-red-600 w-8 text-right">+0</span>
+                    <!-- 最終值顯示 -->
+                    <span class="text-xs text-gray-400 w-14 text-right">→<span id="final-programming" class="font-bold text-gray-600">0</span></span>
+                </div>
+                <!-- 資料忍滑桿 -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-blue-600 w-16 shrink-0">📊 資料</span>
+                    <input type="range" id="slider-data" class="stat-slider slider-data flex-1" min="0" max="100" value="0" oninput="onSliderChange('data', this.value)">
+                    <span id="bonus-data" class="text-sm font-black text-blue-600 w-8 text-right">+0</span>
+                    <span class="text-xs text-gray-400 w-14 text-right">→<span id="final-data" class="font-bold text-gray-600">0</span></span>
+                </div>
+                <!-- 企劃忍滑桿 -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-green-600 w-16 shrink-0">🎯 企劃</span>
+                    <input type="range" id="slider-project" class="stat-slider slider-project flex-1" min="0" max="100" value="0" oninput="onSliderChange('project', this.value)">
+                    <span id="bonus-project" class="text-sm font-black text-green-600 w-8 text-right">+0</span>
+                    <span class="text-xs text-gray-400 w-14 text-right">→<span id="final-project" class="font-bold text-gray-600">0</span></span>
+                </div>
+                <!-- 系統忍滑桿 -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-yellow-600 w-16 shrink-0">⚙️ 系統</span>
+                    <input type="range" id="slider-system" class="stat-slider slider-system flex-1" min="0" max="100" value="0" oninput="onSliderChange('system', this.value)">
+                    <span id="bonus-system" class="text-sm font-black text-yellow-600 w-8 text-right">+0</span>
+                    <span class="text-xs text-gray-400 w-14 text-right">→<span id="final-system" class="font-bold text-gray-600">0</span></span>
+                </div>
+                <!-- 解題忍滑桿 -->
+                <div class="flex items-center gap-2 md:col-span-2">
+                    <span class="text-sm font-bold text-purple-600 w-16 shrink-0">🔮 解題</span>
+                    <input type="range" id="slider-logic" class="stat-slider slider-logic flex-1" min="0" max="100" value="0" oninput="onSliderChange('logic', this.value)">
+                    <span id="bonus-logic" class="text-sm font-black text-purple-600 w-8 text-right">+0</span>
+                    <span class="text-xs text-gray-400 w-14 text-right">→<span id="final-logic" class="font-bold text-gray-600">0</span></span>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 text-center">※ 進入遊戲時將以「基礎 + 強化」為最終能力值</p>
+        </div>
+        <!-- ========================================================
+             自由分配點數區 結束
+             ======================================================== -->
+
+        <button onclick="startGame()" class="btn bg-red-600 text-white font-black py-4 px-12 rounded-full text-2xl shadow-xl hover:bg-red-500 animate-pulse border-4 border-red-300">
             ⚔️ 迎戰會考大魔王 (共10關)
         </button>
     </div>
 </div>
 
-<!-- 3️⃣ 遊戲畫面（canvas 改1000x600 + 新增控制按鈕） -->
+
+<!-- 3️⃣ 遊戲畫面 -->
 <div id="game-screen" class="screen flex-col items-center justify-center bg-gray-900">
-    <div class="w-full max-w-4xl flex justify-between items-center px-4 py-2 text-white font-bold mb-2">
+    <!-- 頂部資訊列（原始保留） -->
+    <div class="w-full max-w-5xl flex justify-between items-center px-4 py-2 text-white font-bold mb-1">
         <div class="text-xl bg-gray-800 px-3 py-1 rounded-lg border border-gray-600">
             💰 <span id="ui-money" class="text-yellow-400">200</span>
             <span class="text-gray-400 text-xs ml-1">(+15/3秒)</span>
         </div>
-        
-        <!-- 玩家城堡HP（改用新變數） -->
         <div class="text-xl flex items-center gap-3 bg-gray-800 px-3 py-1 rounded-lg border border-gray-600">
-            <span>🏰玩家城堡 <span id="ui-player-castle" class="text-red-400">1000</span></span>
+            <span>👑君主 Lv.<span id="ui-lord-level" class="text-amber-400">1</span> (❤️<span id="ui-lives" class="text-red-400">20</span>/<span id="ui-max-lives">20</span>)</span>
             <button onclick="upgradeLord()" class="btn bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-sm px-3 py-1 rounded-full shadow font-black border border-yellow-200 hover:from-yellow-300 hover:to-yellow-500">
                 升級 $<span id="ui-lord-cost">100</span>
             </button>
         </div>
+        <div class="text-xl bg-gray-800 px-3 py-1 rounded-lg border border-gray-600 text-center">👾 關卡 <span id="ui-wave" class="text-cyan-400">1/10</span></div>
 
-        <!-- 新增：敵方城堡HP條 -->
-        <div class="text-xl flex items-center gap-3 bg-gray-800 px-3 py-1 rounded-lg border border-gray-600">
-            <span>🌀敵方城堡 <span id="ui-enemy-castle" class="text-red-400">1000</span></span>
+        <!-- ========================================================
+             【四】Zoom 放大/縮小 按鈕（新增）
+             ======================================================== -->
+        <div class="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded-lg border border-gray-600 text-sm">
+            <button onclick="zoomOut()" class="btn bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded font-black">🔍−</button>
+            <span id="ui-zoom" class="text-cyan-300 font-mono w-10 text-center">100%</span>
+            <button onclick="zoomIn()"  class="btn bg-gray-600 hover:bg-gray-500 text-white px-2 py-1 rounded font-black">🔍+</button>
         </div>
 
-        <div class="text-xl bg-gray-800 px-3 py-1 rounded-lg border border-gray-600 text-center">👾 關卡 <span id="ui-wave" class="text-cyan-400">1/10</span></div>
+        <!-- ========================================================
+             【五】暫停 / 繼續 按鈕（新增）
+             ======================================================== -->
+        <button id="pause-btn" onclick="togglePause()" class="btn bg-orange-500 hover:bg-orange-400 text-white font-black px-3 py-1 rounded-lg text-sm border border-orange-300">
+            ⏸ 暫停
+        </button>
+        <!-- ========================================================
+             暫停 / Zoom 按鈕區結束
+             ======================================================== -->
     </div>
 
     <div id="game-container">
-        <!-- 【三】canvas 改為 1000x600 -->
+        <!-- 【三-1】Canvas 改為 1000×600 -->
         <canvas id="game-canvas" width="1000" height="600"></canvas>
 
-        <!-- 魔王警告（保留） -->
+        <!-- 【二-4】城堡HP條（新增，overlay在canvas上） -->
+        <div id="castle-hp-bar">
+            <!-- 玩家城堡 -->
+            <div class="hp-bar-wrap">
+                <div class="text-xs">🏰 我方城堡</div>
+                <div class="hp-bar-bg">
+                    <div id="player-castle-bar" class="hp-bar-fill bg-green-400" style="width:100%"></div>
+                </div>
+                <div class="text-[10px]">❤️ <span id="ui-player-castle-hp">1000</span> / 1000</div>
+            </div>
+
+            <div class="text-xl font-black text-red-400 px-2">⚔️</div>
+
+            <!-- 敵方城堡 -->
+            <div class="hp-bar-wrap">
+                <div class="text-xs">🌀 敵方城堡</div>
+                <div class="hp-bar-bg">
+                    <div id="enemy-castle-bar" class="hp-bar-fill bg-red-400" style="width:100%"></div>
+                </div>
+                <div class="text-[10px]">💀 <span id="ui-enemy-castle-hp">1000</span> / 1000</div>
+            </div>
+        </div>
+        <!-- 城堡HP條結束 -->
+
+        <!-- 魔王警告（原始保留） -->
         <div id="boss-warning" class="hidden absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl font-black text-red-600 animate-bounce drop-shadow-2xl bg-white/95 px-8 py-5 rounded-3xl border-4 border-red-600 whitespace-nowrap z-50 pointer-events-none shadow-[0_0_30px_rgba(220,38,38,0.6)]">
             ⚠️ 會考大魔王 來襲！ ⚠️
         </div>
 
-        <!-- 【五】暫停 / 【四】Zoom 控制按鈕 -->
-        <div class="absolute top-6 right-6 flex flex-col gap-2 z-50">
-            <button onclick="togglePause()" id="pause-btn"
-                class="control-btn px-6 py-2.5 rounded-xl text-sm flex items-center gap-2">
-                ⏸ 暫停
-            </button>
-            <button onclick="zoomIn()" 
-                class="control-btn px-6 py-2.5 rounded-xl text-sm flex items-center gap-2">
-                🔍 放大
-            </button>
-            <button onclick="zoomOut()" 
-                class="control-btn px-6 py-2.5 rounded-xl text-sm flex items-center gap-2">
-                🔎 縮小
-            </button>
+        <!-- 【五】暫停遮罩（新增） -->
+        <div id="pause-overlay" class="hidden absolute inset-0 flex items-center justify-center z-40 pointer-events-none">
+            <div class="bg-black/70 rounded-3xl px-12 py-8 text-white text-center">
+                <div class="text-6xl mb-3">⏸</div>
+                <div class="text-3xl font-black">遊戲暫停中</div>
+                <div class="text-gray-400 mt-2 text-sm">按「繼續」恢復遊戲</div>
+            </div>
         </div>
 
-        <!-- 忍者派遣工具列（保留 + 已套用 scale/opacity） -->
-        <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white/95 px-3 py-2 rounded-2xl shadow-xl flex gap-2 border-2 border-gray-200 items-stretch">
-            <!-- 5個按鈕完全保留（僅調整樣式） -->
+        <!-- 【三-2/3】忍者選單：透明背景 opacity-0.9，不遮路徑 -->
+        <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white/90 px-2 py-1 rounded-2xl shadow-xl flex gap-1 border-2 border-gray-200 items-stretch" style="opacity:0.92">
+
             <div id="btn-deploy-coding" onclick="deployNinja('coding')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-red-50">
                 <div class="text-3xl drop-shadow leading-none">💻</div>
                 <div class="text-[11px] font-black text-red-600 mt-1">程式忍</div>
                 <div class="text-[10px] font-bold text-gray-500">$60</div>
                 <div id="lv-coding" class="text-[9px] text-indigo-600 font-black">Lv.1 🐣新手</div>
-                <button onclick="event.stopPropagation(); upgradeNinja('coding')" id="upg-btn-coding" class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $80</button>
-                <div class="cd-overlay rounded-xl" id="cd-overlay-coding" style="height:0%"><div class="cd-label" id="cd-label-coding"></div></div>
+                <button onclick="event.stopPropagation(); upgradeNinja('coding')" id="upg-btn-coding"
+                    class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $80</button>
+                <div class="cd-overlay rounded-xl" id="cd-overlay-coding" style="height:0%">
+                    <div class="cd-label" id="cd-label-coding"></div>
+                </div>
             </div>
-            <!-- 其餘4個按鈕完全相同（省略以節省篇幅，實際程式碼已完整複製） -->
-            <!-- ... data, project, system, logic 按鈕完全保留 ... -->
-            <div id="btn-deploy-data" onclick="deployNinja('data')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-blue-50">...</div>
-            <div id="btn-deploy-project" onclick="deployNinja('project')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-green-50">...</div>
-            <div id="btn-deploy-system" onclick="deployNinja('system')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-yellow-50">...</div>
-            <div id="btn-deploy-logic" onclick="deployNinja('logic')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-purple-50">...</div>
+
+            <div id="btn-deploy-data" onclick="deployNinja('data')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-blue-50">
+                <div class="text-3xl drop-shadow leading-none">📊</div>
+                <div class="text-[11px] font-black text-blue-600 mt-1">資料忍</div>
+                <div class="text-[10px] font-bold text-gray-500">$50</div>
+                <div id="lv-data" class="text-[9px] text-indigo-600 font-black">Lv.1 🔍收集</div>
+                <button onclick="event.stopPropagation(); upgradeNinja('data')" id="upg-btn-data"
+                    class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $60</button>
+                <div class="cd-overlay rounded-xl" id="cd-overlay-data" style="height:0%">
+                    <div class="cd-label" id="cd-label-data"></div>
+                </div>
+            </div>
+
+            <div id="btn-deploy-project" onclick="deployNinja('project')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-green-50">
+                <div class="text-3xl drop-shadow leading-none">🎯</div>
+                <div class="text-[11px] font-black text-green-600 mt-1">企劃忍</div>
+                <div class="text-[10px] font-bold text-gray-500">$70</div>
+                <div id="lv-project" class="text-[9px] text-indigo-600 font-black">Lv.1 📝草案</div>
+                <button onclick="event.stopPropagation(); upgradeNinja('project')" id="upg-btn-project"
+                    class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $90</button>
+                <div class="cd-overlay rounded-xl" id="cd-overlay-project" style="height:0%">
+                    <div class="cd-label" id="cd-label-project"></div>
+                </div>
+            </div>
+
+            <div id="btn-deploy-system" onclick="deployNinja('system')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-yellow-50">
+                <div class="text-3xl drop-shadow leading-none">⚙️</div>
+                <div class="text-[11px] font-black text-yellow-600 mt-1">系統忍</div>
+                <div class="text-[10px] font-bold text-gray-500">$80</div>
+                <div id="lv-system" class="text-[9px] text-indigo-600 font-black">Lv.1 🧱架構</div>
+                <button onclick="event.stopPropagation(); upgradeNinja('system')" id="upg-btn-system"
+                    class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $100</button>
+                <div class="cd-overlay rounded-xl" id="cd-overlay-system" style="height:0%">
+                    <div class="cd-label" id="cd-label-system"></div>
+                </div>
+            </div>
+
+            <div id="btn-deploy-logic" onclick="deployNinja('logic')" class="ninja-deploy-btn flex flex-col items-center p-2 rounded-xl hover:bg-purple-50">
+                <div class="text-3xl drop-shadow leading-none">🔮</div>
+                <div class="text-[11px] font-black text-purple-600 mt-1">解題忍</div>
+                <div class="text-[10px] font-bold text-gray-500">$75</div>
+                <div id="lv-logic" class="text-[9px] text-indigo-600 font-black">Lv.1 🐛除錯</div>
+                <button onclick="event.stopPropagation(); upgradeNinja('logic')" id="upg-btn-logic"
+                    class="text-[9px] bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded mt-0.5 font-bold whitespace-nowrap">⬆ $100</button>
+                <div class="cd-overlay rounded-xl" id="cd-overlay-logic" style="height:0%">
+                    <div class="cd-label" id="cd-label-logic"></div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
-<!-- 4️⃣ 結算畫面（完全保留） -->
+
+<!-- 4️⃣ 結算畫面（原始保留） -->
 <div id="result-screen" class="screen flex-col items-center justify-center bg-gray-900 bg-opacity-95">
     <div class="bg-white p-10 rounded-3xl shadow-2xl max-w-lg w-full mx-4 text-center border-t-8 border-indigo-500">
         <h1 id="result-title" class="text-4xl font-black text-indigo-600 mb-2">🎉 防守成功！</h1>
@@ -183,9 +350,10 @@
     </div>
 </div>
 
+
 <script>
 /* ==========================================
-   0. 音效系統（完全保留）
+   0. 音效系統（原始保留）
    ========================================== */
 let audioCtx;
 function initAudio() {
@@ -198,303 +366,1013 @@ function playSound(type) {
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
-    if (type === 'shoot') { /* 原有程式碼 */ osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.1); gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
-    else if (type === 'hit') { /* 原有 */ }
-    else if (type === 'boss') { /* 原有 */ }
-    else if (type === 'upgrade') { /* 原有 */ }
-    else if (type === 'lord_upgrade') { /* 原有 */ }
-    else if (type === 'deploy') { /* 原有 */ }
+    if (type === 'shoot') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+        gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'hit') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+        gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'boss') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(600, now + 0.2); osc.frequency.setValueAtTime(300, now + 0.4);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.8);
+        osc.start(now); osc.stop(now + 0.8);
+    } else if (type === 'upgrade') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(1000, now + 0.4);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc.start(now); osc.stop(now + 0.4);
+    } else if (type === 'lord_upgrade') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(800, now + 0.2); osc.frequency.linearRampToValueAtTime(1200, now + 0.5);
+        gain.gain.setValueAtTime(0.15, now); gain.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.start(now); osc.stop(now + 0.5);
+    } else if (type === 'deploy') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(900, now + 0.15);
+        gain.gain.setValueAtTime(0.07, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start(now); osc.stop(now + 0.2);
+    }
 }
 
+
 /* ==========================================
-   1. 遊戲資料庫（完全保留）
+   1. 遊戲資料庫（原始保留）
    ========================================== */
-const NINJA_TYPES = { /* 原有5種忍者完全保留 */ 
-    coding: { name: '💻 程式忍', emoji: '💻', color: '#ef4444', statKey: 'programming', cost: 60, deployCooldown: 180, baseHp: 80, baseAtk: 28, atkSpeed: 45, speed: 1.1, levels: [{ rank: '🐣新手', hpBonus: 0, atkBonus: 0, upCost: 80 }, { rank: '🚀熟練', hpBonus: 55, atkBonus: 22, upCost: 150 }, { rank: '👑駭客', hpBonus: 130, atkBonus: 65, upCost: null }] },
-    /* data, project, system, logic 同樣保留（省略以節省篇幅，實際程式已完整） */
+const NINJA_TYPES = {
+    coding: {
+        name: '💻 程式忍', emoji: '💻', color: '#ef4444', statKey: 'programming',
+        cost: 60, deployCooldown: 180,
+        baseHp: 80, baseAtk: 28, atkSpeed: 45, speed: 1.1,
+        levels: [
+            { rank: '🐣新手', hpBonus: 0,   atkBonus: 0,  upCost: 80 },
+            { rank: '🚀熟練', hpBonus: 55,  atkBonus: 22, upCost: 150 },
+            { rank: '👑駭客', hpBonus: 130, atkBonus: 65, upCost: null }
+        ]
+    },
+    data: {
+        name: '📊 資料忍', emoji: '📊', color: '#3b82f6', statKey: 'data',
+        cost: 50, deployCooldown: 150,
+        baseHp: 60, baseAtk: 18, atkSpeed: 35, speed: 1.3,
+        slowEffect: 0.45,
+        levels: [
+            { rank: '🔍收集', hpBonus: 0,  atkBonus: 0,  upCost: 60 },
+            { rank: '📉分析', hpBonus: 38, atkBonus: 16, upCost: 110 },
+            { rank: '🌐大數據', hpBonus: 95, atkBonus: 42, upCost: null }
+        ]
+    },
+    project: {
+        name: '🎯 企劃忍', emoji: '🎯', color: '#22c55e', statKey: 'project',
+        cost: 70, deployCooldown: 220,
+        baseHp: 150, baseAtk: 22, atkSpeed: 60, speed: 0.85,
+        levels: [
+            { rank: '📝草案', hpBonus: 0,   atkBonus: 0,  upCost: 90 },
+            { rank: '🛠️實作', hpBonus: 90,  atkBonus: 18, upCost: 160 },
+            { rank: '🏆金獎', hpBonus: 210, atkBonus: 50, upCost: null }
+        ]
+    },
+    system: {
+        name: '⚙️ 系統忍', emoji: '⚙️', color: '#eab308', statKey: 'system',
+        cost: 80, deployCooldown: 250,
+        baseHp: 110, baseAtk: 40, atkSpeed: 55, speed: 0.95,
+        areaAtk: true,
+        levels: [
+            { rank: '🧱架構', hpBonus: 0,   atkBonus: 0,  upCost: 100 },
+            { rank: '🔗整合', hpBonus: 70,  atkBonus: 32, upCost: 180 },
+            { rank: '🏛️大師', hpBonus: 170, atkBonus: 85, upCost: null }
+        ]
+    },
+    logic: {
+        name: '🔮 解題忍', emoji: '🔮', color: '#a855f7', statKey: 'logic',
+        cost: 75, deployCooldown: 210,
+        baseHp: 85, baseAtk: 52, atkSpeed: 50, speed: 1.0,
+        levels: [
+            { rank: '🐛除錯',  hpBonus: 0,   atkBonus: 0,  upCost: 100 },
+            { rank: '✨最佳化', hpBonus: 60,  atkBonus: 38, upCost: 180 },
+            { rank: '🧙大師',  hpBonus: 140, atkBonus: 100, upCost: null }
+        ]
+    }
 };
-const MINIONS = [ /* 原有 */ ];
-const BOSS_SUBJECTS = [ /* 原有 */ ];
-const MAPS = [ /* 原有 */ ];
-const statConfig = [ /* 原有 */ ];
-const mockDatabase = { /* 原有 */ };
+
+const MINIONS = [
+    { name: '平時考', emoji: '📝', hpMult: 1.0, spdMult: 1.2, rwd: 10, atk: 6 },
+    { name: '遲到生', emoji: '⏰', hpMult: 0.6, spdMult: 1.6, rwd: 8,  atk: 4 },
+    { name: '掃地兵', emoji: '🧹', hpMult: 1.5, spdMult: 0.8, rwd: 15, atk: 8 },
+    { name: '體測兵', emoji: '🏃', hpMult: 0.8, spdMult: 2.0, rwd: 12, atk: 5 }
+];
+
+const BOSS_SUBJECTS = [
+    { key: 'chinese', label: '會考國文', emoji: '📜' },
+    { key: 'english', label: '會考英文', emoji: '🔤' },
+    { key: 'math',    label: '會考數學', emoji: '📐' },
+    { key: 'social',  label: '會考社會', emoji: '🌍' },
+    { key: 'science', label: '會考自然', emoji: '🔬' }
+];
+
+// 10關地圖（路徑座標按新canvas 1000×600 對應 GRID_SIZE=55）
+const MAPS = [
+    { name: '1. 新手草原', bgColor: '#dcfce7', pathColor: '#86efac', path: [{x:0,y:4},{x:5,y:4},{x:5,y:8},{x:12,y:8},{x:12,y:3},{x:17,y:3}] },
+    { name: '2. 寒冰走廊', bgColor: '#e0f2fe', pathColor: '#7dd3fc', path: [{x:0,y:2},{x:13,y:2},{x:13,y:8},{x:4,y:8},{x:4,y:5},{x:17,y:5}] },
+    { name: '3. 迷失沙漠', bgColor: '#fef3c7', pathColor: '#fcd34d', path: [{x:17,y:7},{x:8,y:7},{x:8,y:1},{x:2,y:1},{x:2,y:9},{x:0,y:9}] },
+    { name: '4. 櫻花小徑', bgColor: '#fce7f3', pathColor: '#f9a8d4', path: [{x:0,y:5},{x:4,y:5},{x:4,y:1},{x:12,y:1},{x:12,y:8},{x:17,y:8}] },
+    { name: '5. 魔法密林', bgColor: '#f3e8ff', pathColor: '#d8b4fe', path: [{x:2,y:0},{x:2,y:7},{x:8,y:7},{x:8,y:2},{x:13,y:2},{x:13,y:10}] },
+    { name: '6. 荒野古道', bgColor: '#ffedd5', pathColor: '#fdba74', path: [{x:0,y:8},{x:15,y:8},{x:15,y:1},{x:1,y:1},{x:1,y:5},{x:17,y:5}] },
+    { name: '7. 蔚藍淺灘', bgColor: '#ccfbf1', pathColor: '#5eead4', path: [{x:0,y:1},{x:5,y:1},{x:5,y:8},{x:11,y:8},{x:11,y:4},{x:17,y:4}] },
+    { name: '8. 古老遺跡', bgColor: '#f3f4f6', pathColor: '#d1d5db', path: [{x:17,y:2},{x:3,y:2},{x:3,y:7},{x:13,y:7},{x:13,y:9},{x:0,y:9}] },
+    { name: '9. 熔岩火山', bgColor: '#fee2e2', pathColor: '#fca5a5', path: [{x:0,y:9},{x:9,y:9},{x:9,y:0},{x:17,y:0}] },
+    { name: '10. 終極虛空', bgColor: '#1e293b', pathColor: '#475569', path: [{x:0,y:5},{x:17,y:5}] }
+];
+
+const statConfig = [
+    { key: 'programming', label: '💻程式忍' },
+    { key: 'data',        label: '📊資料忍' },
+    { key: 'project',     label: '🎯企劃忍' },
+    { key: 'system',      label: '⚙️系統忍' },
+    { key: 'logic',       label: '🔮解題忍' }
+];
+
+const mockDatabase = {
+    "小明": { programming: 85, data: 60, project: 90, system: 75, logic: 80 },
+    "小華": { programming: 65, data: 95, project: 70, system: 85, logic: 90 },
+    "小美": { programming: 95, data: 90, project: 85, system: 90, logic: 95 }
+};
 
 let currentPlayer = { name: "", stats: {}, levelStr: "" };
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz9vOO1WaJLvXMbZEs55WMIqeRuVVuijHuTESNG642ppCq8m-sGBHhETdbvMo5T7AYTBw/exec";
 
-/* ==========================================
-   【一】新增：自由分配點數變數
-   ========================================== */
-let allocatedPoints = { programming: 0, data: 0, project: 0, system: 0, logic: 0 };
 
 /* ==========================================
-   【二】新增：雙方城堡HP
+   【一】能力值分配系統（新增）
+   - bonusPoints: 五項分配點，總和不超過100
+   - finalStats: 原始stats + bonusPoints（進遊戲時使用）
    ========================================== */
-let playerCastleHP = 1000;
-let enemyCastleHP = 1000;
+const TOTAL_BONUS = 100; // 可分配總點數
+let bonusPoints = { programming: 0, data: 0, project: 0, system: 0, logic: 0 };
+
+/**
+ * slider 變更時呼叫：
+ * 1. 嘗試設定新值
+ * 2. 計算其他項目當前合計
+ * 3. 若超出上限，把此 slider 鎖在允許最大值
+ * 4. 更新顯示
+ */
+function onSliderChange(key, rawVal) {
+    const val = parseInt(rawVal, 10);
+    // 計算其他四項目前分配的合計
+    const otherSum = statConfig
+        .filter(s => s.key !== key)
+        .reduce((sum, s) => sum + (bonusPoints[s.key] || 0), 0);
+
+    // 本項最多只能到 TOTAL_BONUS - otherSum
+    const maxAllowed = TOTAL_BONUS - otherSum;
+    bonusPoints[key] = Math.min(val, maxAllowed);
+
+    // 回寫 slider（防止超額）
+    document.getElementById(`slider-${key}`).value = bonusPoints[key];
+
+    // 更新各項顯示
+    updateBonusDisplay();
+}
+
+/** 更新分配面板上的數字顯示與雷達圖 */
+function updateBonusDisplay() {
+    const usedSum = statConfig.reduce((sum, s) => sum + (bonusPoints[s.key] || 0), 0);
+    document.getElementById('bonus-remaining').innerText = TOTAL_BONUS - usedSum;
+
+    statConfig.forEach(s => {
+        const base  = currentPlayer.stats[s.key] || 0;
+        const bonus = bonusPoints[s.key] || 0;
+        document.getElementById(`bonus-${s.key}`).innerText = `+${bonus}`;
+        document.getElementById(`final-${s.key}`).innerText = base + bonus;
+    });
+
+    // 同步更新雷達圖（顯示最終值）
+    if (radarChartInstance) {
+        radarChartInstance.data.datasets[0].data = statConfig.map(s =>
+            (currentPlayer.stats[s.key] || 0) + (bonusPoints[s.key] || 0)
+        );
+        radarChartInstance.update();
+    }
+}
+
+/** 重設分配滑桿（登入新玩家時呼叫） */
+function resetBonusSliders() {
+    statConfig.forEach(s => {
+        bonusPoints[s.key] = 0;
+        const slider = document.getElementById(`slider-${s.key}`);
+        if (slider) slider.value = 0;
+    });
+    updateBonusDisplay();
+}
+
 
 /* ==========================================
-   【四】新增：縮放變數
+   2. 登入 / 數據面板（原始保留，追加 resetBonusSliders）
    ========================================== */
-let zoomLevel = 1.0;
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
 
-/* ==========================================
-   【五】新增：暫停變數
-   ========================================== */
-let isPaused = false;
-
-/* ==========================================
-   2. 登入 / 數據面板（新增分配點數初始化）
-   ========================================== */
-function showScreen(id) { /* 原有 */ }
-const loginBtn = document.getElementById('login-btn');
 async function login() {
     initAudio();
     const nameInput = document.getElementById('player-name').value.trim();
     if (!nameInput) { alert("請輸入君主姓名！"); return; }
     currentPlayer.name = nameInput;
 
-    /* ... 原有 fetch 與 random stats ... */
+    const loginBtn = document.getElementById('login-btn');
+    loginBtn.innerText = "連線讀取成績中..."; loginBtn.disabled = true;
+
+    try {
+        const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(nameInput)}`);
+        const result = await response.json();
+        if (result.success && result.data) {
+            currentPlayer.stats = result.data;
+            statConfig.forEach(s => { if (currentPlayer.stats[s.key] === undefined) currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60; });
+        } else { generateRandomStats(nameInput); }
+    } catch (e) { generateRandomStats(nameInput); }
 
     loginBtn.innerText = "進入忍界 (讀取雲端數據)"; loginBtn.disabled = false;
-
-    /* 【一】初始化分配點數 */
-    allocatedPoints = { programming: 0, data: 0, project: 0, system: 0, logic: 0 };
-
-    calculateLevel(); 
-    updateDashboard(); 
+    calculateLevel();
+    resetBonusSliders(); // 【一】重設分配滑桿
+    updateDashboard();
     showScreen('dashboard-screen');
 }
 
-/* 【一】分配點數相關函式 */
-function initAllocationSliders() {
-    const section = document.getElementById('allocation-section');
-    section.innerHTML = '';
-    const keys = ['programming','data','project','system','logic'];
-    const labels = ['💻 程式忍','📊 資料忍','🎯 企劃忍','⚙️ 系統忍','🔮 解題忍'];
-    
-    keys.forEach((key,i) => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center gap-4';
-        div.innerHTML = `
-            <span class="w-28 font-bold text-sm">${labels[i]}</span>
-            <input type="range" min="0" max="100" value="${allocatedPoints[key]}" 
-                   class="flex-1 accent-indigo-600" id="slider-${key}" 
-                   oninput="updateAllocation('${key}', this.value)">
-            <span class="w-12 font-mono text-lg text-right" id="val-${key}">${allocatedPoints[key]}</span>
-        `;
-        section.appendChild(div);
-    });
+function generateRandomStats(name) {
+    if (mockDatabase[name]) { currentPlayer.stats = { ...mockDatabase[name] }; }
+    else { currentPlayer.stats = {}; statConfig.forEach(s => { currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60; }); }
 }
 
-function updateAllocation(key, valStr) {
-    let val = parseInt(valStr);
-    let currentSum = Object.values(allocatedPoints).reduce((a,b)=>a+b,0);
-    let old = allocatedPoints[key];
-    let newSum = currentSum - old + val;
-    
-    if (newSum > 100) val = 100 - (currentSum - old);
-    
-    allocatedPoints[key] = Math.max(0, val);
-    document.getElementById(`slider-${key}`).value = allocatedPoints[key];
-    document.getElementById(`val-${key}`).innerText = allocatedPoints[key];
-    
-    const remain = 100 - Object.values(allocatedPoints).reduce((a,b)=>a+b,0);
-    document.getElementById('remaining-points').innerText = remain;
-    
-    updateDashboardStatsWithExtra();
+function calculateLevel() {
+    const vals = Object.values(currentPlayer.stats);
+    const avg = vals.reduce((a, b) => a + b) / vals.length;
+    let title = avg < 60 ? "🌱見習君主" : avg < 70 ? "⚔️新星領主" : avg < 80 ? "🌀一方霸主" : avg < 90 ? "👑王國大帝" : "🌌忍界神皇";
+    currentPlayer.levelStr = `Lv.${Math.floor(avg)} ${title}`;
 }
 
-function updateDashboardStatsWithExtra() {
-    statConfig.forEach(s => {
-        const base = currentPlayer.stats[s.key] || 60;
-        const extra = allocatedPoints[s.key] || 0;
-        document.getElementById(`stat-${s.key}`).innerText = base + extra;
-    });
-    
-    /* 更新雷達圖為最終能力值 */
-    if (radarChartInstance) {
-        const finalData = statConfig.map(s => (currentPlayer.stats[s.key]||60) + (allocatedPoints[s.key]||0));
-        radarChartInstance.data.datasets[0].data = finalData;
-        radarChartInstance.update();
-    }
-}
-
+let radarChartInstance = null;
 function updateDashboard() {
-    /* 原有雷達圖與標題 */
     document.getElementById('ninja-title').innerText = `${currentPlayer.levelStr} - ${currentPlayer.name}`;
     statConfig.forEach(s => {
         const el = document.getElementById(`stat-${s.key}`);
-        if (el) el.innerText = currentPlayer.stats[s.key] || 60;
+        if (el) el.innerText = currentPlayer.stats[s.key];
     });
-    
     const ctx2 = document.getElementById('radar-chart').getContext('2d');
     if (radarChartInstance) radarChartInstance.destroy();
-    radarChartInstance = new Chart(ctx2, { /* 原有設定 */ });
-    
-    /* 【一】初始化分配滑桿與即時更新 */
-    initAllocationSliders();
-    updateDashboardStatsWithExtra();
+    radarChartInstance = new Chart(ctx2, {
+        type: 'radar',
+        data: {
+            labels: statConfig.map(s => s.label),
+            datasets: [{ label: '英雄戰力', data: statConfig.map(s => currentPlayer.stats[s.key]),
+                backgroundColor: 'rgba(99,102,241,0.2)', borderColor: 'rgba(79,70,229,1)',
+                pointBackgroundColor: 'rgba(67,56,202,1)', borderWidth: 3 }]
+        },
+        options: {
+            scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 },
+                pointLabels: { font: { size: 13, weight: '900', family: "'Noto Sans TC', sans-serif" } } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+    // 登入後先更新分配顯示
+    updateBonusDisplay();
 }
 
+
 /* ==========================================
-   3. 遊戲變數與初始化（新增城堡HP、zoom、pause）
+   3. 核心遊戲變數（原始保留 + 新增項目）
    ========================================== */
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-const GRID_SIZE = 50;
+const GRID_SIZE = 55;              // 調整以配合新 canvas 1000×600
+const FIGHT_RANGE = 52;
+const PASSIVE_GOLD_INTERVAL = 180;
+const PASSIVE_GOLD_AMOUNT = 15;
 
 let gameLoopId, money, gameOver, frameCount;
-let playerUnits = [], enemies = [], particles = [];
-let deployCooldowns = {}, ninjaLevels = {};
+let playerUnits = [];
+let enemies = [];
+let particles = [];
+let deployCooldowns = {};
+let ninjaLevels = {};
+
+// 君主系統
 let lordLevel, maxLives, lives, lordUpgradeCost;
-let currentWave, waveActive, smallEnemySpawned, bossSpawned, spawnTimer = 0;
+
+// 波次系統
+let currentWave, waveActive, smallEnemySpawned, bossSpawned;
+let spawnTimer = 0;
 let path, pathPoints, currentMap;
 
-/* 【二】城堡HP已在上面宣告 */
+/* ==========================================
+   【二】城堡HP系統（新增）
+   ========================================== */
+const MAX_CASTLE_HP = 1000;
+let playerCastleHP = MAX_CASTLE_HP; // 玩家城堡血量
+let enemyCastleHP  = MAX_CASTLE_HP; // 敵方城堡血量
 
+/* ==========================================
+   【四】Zoom 系統（新增）
+   - 範圍限制：0.5 ~ 2.0
+   ========================================== */
+let zoomLevel = 1.0;
+
+function zoomIn() {
+    zoomLevel = Math.min(2.0, parseFloat((zoomLevel + 0.1).toFixed(1)));
+    document.getElementById('ui-zoom').innerText = Math.round(zoomLevel * 100) + '%';
+}
+
+function zoomOut() {
+    zoomLevel = Math.max(0.5, parseFloat((zoomLevel - 0.1).toFixed(1)));
+    document.getElementById('ui-zoom').innerText = Math.round(zoomLevel * 100) + '%';
+}
+
+/* ==========================================
+   【五】暫停系統（新增）
+   - isPaused: 暫停旗標
+   - togglePause(): 切換暫停/繼續
+   ========================================== */
+let isPaused = false;
+
+function togglePause() {
+    isPaused = !isPaused;
+    const btn     = document.getElementById('pause-btn');
+    const overlay = document.getElementById('pause-overlay');
+    if (isPaused) {
+        // 暫停：取消 rAF，顯示遮罩
+        if (gameLoopId) cancelAnimationFrame(gameLoopId);
+        btn.innerText = '▶ 繼續';
+        btn.classList.replace('bg-orange-500', 'bg-green-500');
+        btn.classList.replace('hover:bg-orange-400', 'hover:bg-green-400');
+        btn.classList.replace('border-orange-300', 'border-green-300');
+        overlay.classList.remove('hidden');
+    } else {
+        // 繼續：恢復 rAF
+        btn.innerText = '⏸ 暫停';
+        btn.classList.replace('bg-green-500', 'bg-orange-500');
+        btn.classList.replace('hover:bg-green-400', 'hover:bg-orange-400');
+        btn.classList.replace('border-green-300', 'border-orange-300');
+        overlay.classList.add('hidden');
+        gameLoop(); // 重新啟動迴圈
+    }
+}
+
+
+/* ==========================================
+   4. 遊戲初始化（原始保留 + 新增城堡HP/暫停重設）
+   ========================================== */
 function startGame() {
     showScreen('game-screen');
+
+    // 【一】使用「原始能力 + 分配點數」作為最終能力
+    const finalStats = {};
+    statConfig.forEach(s => {
+        finalStats[s.key] = (currentPlayer.stats[s.key] || 0) + (bonusPoints[s.key] || 0);
+    });
+    // 以 finalStats 作為本局能力（暫存回 currentPlayer.stats）
+    currentPlayer._baseStats = { ...currentPlayer.stats }; // 保存原始值
+    currentPlayer.stats = finalStats;
+
     money = 250 + Math.floor((currentPlayer.stats.logic || 70));
-    lordLevel = 1; maxLives = 20 + Math.floor((currentPlayer.stats.system || 70) / 5); lives = maxLives; lordUpgradeCost = 100;
-    
+    lordLevel = 1;
+    maxLives = 20 + Math.floor((currentPlayer.stats.system || 70) / 5);
+    lives = maxLives;
+    lordUpgradeCost = 100;
+
     playerUnits = []; enemies = []; particles = [];
     deployCooldowns = { coding: 0, data: 0, project: 0, system: 0, logic: 0 };
-    ninjaLevels = { coding: 0, data: 0, project: 0, system: 0, logic: 0 };
-    
-    /* 【二】重置城堡HP */
-    playerCastleHP = 1000;
-    enemyCastleHP = 1000;
-    
-    currentWave = 0; gameOver = false; frameCount = 0; waveActive = false; isPaused = false; zoomLevel = 1.0;
-    
+    ninjaLevels    = { coding: 0, data: 0, project: 0, system: 0, logic: 0 };
+    currentWave = 0; gameOver = false; frameCount = 0; waveActive = false;
+
+    // 【二】城堡HP重設
+    playerCastleHP = MAX_CASTLE_HP;
+    enemyCastleHP  = MAX_CASTLE_HP;
+
+    // 【四】Zoom 重設
+    zoomLevel = 1.0;
+    document.getElementById('ui-zoom').innerText = '100%';
+
+    // 【五】暫停重設
+    isPaused = false;
+    const pauseBtn = document.getElementById('pause-btn');
+    pauseBtn.innerText = '⏸ 暫停';
+    pauseBtn.className = 'btn bg-orange-500 hover:bg-orange-400 text-white font-black px-3 py-1 rounded-lg text-sm border border-orange-300';
+    document.getElementById('pause-overlay').classList.add('hidden');
+
     document.getElementById('boss-warning').classList.add('hidden');
     if (gameLoopId) cancelAnimationFrame(gameLoopId);
-    
+
     startWave();
     gameLoop();
 }
 
-function startWave() { /* 原有 */ }
+function startWave() {
+    if (currentWave >= 10) { endGame(true); return; }
 
-/* ==========================================
-   4. 派遣與升級（使用最終能力值 = 原始 + 分配點數）
-   ========================================== */
-function deployNinja(type) {
-    /* 原有邏輯 ... */
-    const statVal = (currentPlayer.stats[def.statKey] || 60) + (allocatedPoints[def.statKey] || 0);  /* 【一】使用最終能力 */
-    /* 其餘完全保留 */
+    currentMap   = MAPS[currentWave];
+    path         = currentMap.path;
+    pathPoints   = path.map(p => ({ x: p.x * GRID_SIZE + Math.floor(GRID_SIZE / 2), y: p.y * GRID_SIZE + Math.floor(GRID_SIZE / 2) }));
+
+    playerUnits = [];
+    enemies     = [];
+
+    // 【二】每關重設敵方城堡HP
+    enemyCastleHP = MAX_CASTLE_HP;
+
+    waveActive = true;
+    smallEnemySpawned = 0;
+    bossSpawned = false;
+    spawnTimer  = 0;
+    frameCount  = 0;
+    updateUI();
 }
 
+
 /* ==========================================
-   5. 主遊戲迴圈（加入暫停、縮放、城堡判斷）
+   5. 忍者派遣 & 升級（原始保留）
+   ========================================== */
+function deployNinja(type) {
+    if (gameOver || !waveActive) return;
+    const def  = NINJA_TYPES[type];
+    const cd   = deployCooldowns[type] || 0;
+    if (money < def.cost || cd > 0) return;
+
+    money -= def.cost;
+    deployCooldowns[type] = def.deployCooldown;
+
+    const level    = ninjaLevels[type];
+    const lvlData  = def.levels[level];
+    const statVal  = currentPlayer.stats[def.statKey] || 60;
+    const statBonus = statVal / 5;
+
+    const hp  = def.baseHp  + lvlData.hpBonus  + Math.floor(statBonus * 2);
+    const atk = def.baseAtk + lvlData.atkBonus + Math.floor(statBonus);
+
+    const startPt = pathPoints[pathPoints.length - 1];
+    playerUnits.push({
+        x: startPt.x, y: startPt.y,
+        pathIndex: pathPoints.length - 2,
+        type, emoji: def.emoji, color: def.color,
+        hp, maxHp: hp, atk, atkSpeed: def.atkSpeed,
+        atkCooldown: def.atkSpeed,
+        speed: def.speed,
+        level, rank: lvlData.rank,
+        slowEffect: def.slowEffect || null,
+        areaAtk: def.areaAtk || false,
+        state: 'moving'
+    });
+
+    playSound('deploy');
+    updateUI();
+}
+
+function upgradeNinja(type) {
+    if (gameOver) return;
+    const def     = NINJA_TYPES[type];
+    const level   = ninjaLevels[type];
+    const lvlData = def.levels[level];
+    if (!lvlData.upCost || money < lvlData.upCost) return;
+
+    money -= lvlData.upCost;
+    ninjaLevels[type]++;
+    playSound('upgrade');
+    updateUI();
+}
+
+function upgradeLord() {
+    if (money < lordUpgradeCost) return;
+    money -= lordUpgradeCost;
+    lordLevel++;
+    maxLives += 10;
+    lives = Math.min(lives + 15, maxLives);
+    lordUpgradeCost = Math.floor(lordUpgradeCost * 1.5);
+    playSound('lord_upgrade');
+
+    const el = document.getElementById('ui-lives');
+    el.classList.add('scale-150', 'text-green-400');
+    setTimeout(() => el.classList.remove('scale-150', 'text-green-400'), 300);
+    updateUI();
+}
+
+
+/* ==========================================
+   6. 主遊戲迴圈（加入暫停判斷 + Zoom）
    ========================================== */
 function gameLoop() {
-    if (gameOver || isPaused) return;   /* 【五】暫停時直接返回 */
+    // 【五】暫停時直接 return，停止 rAF
+    if (isPaused) return;
+    if (gameOver) return;
 
     frameCount++;
 
-    /* 被動金幣與冷卻（原有） */
-    if (frameCount % 180 === 0) money += 15;
+    // 被動金幣
+    if (frameCount % PASSIVE_GOLD_INTERVAL === 0) money += PASSIVE_GOLD_AMOUNT;
+
+    // 各忍者冷卻倒數
     Object.keys(deployCooldowns).forEach(t => { if (deployCooldowns[t] > 0) deployCooldowns[t]--; });
 
-    /* 【四】縮放（置中版，效果更好） */
-    ctx.save();
-    const scale = zoomLevel;
-    const tx = (canvas.width * (1 - scale)) / 2;
-    const ty = (canvas.height * (1 - scale)) / 2;
-    ctx.setTransform(scale, 0, 0, scale, tx, ty);
+    // 【四】套用 Zoom 變換（先清除再設定）
+    ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
 
+    // 繪製背景
     ctx.fillStyle = currentMap ? currentMap.bgColor : '#dcfce7';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 背景需填滿實際畫面，除以 zoomLevel 得到邏輯座標大小
+    ctx.fillRect(0, 0, canvas.width / zoomLevel, canvas.height / zoomLevel);
 
     drawMap();
     if (waveActive) handleWaveLogic();
     handleEnemies();
     handlePlayerUnits();
     handleParticles();
+
+    // 【四】重設 transform（避免影響 DOM 外的繪圖）
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
     updateUI();
     updateDeployButtons();
+    updateCastleHPBar(); // 【二】更新城堡HP條
 
-    ctx.restore();   /* 還原縮放 */
-
-    /* 【二】城堡HP判斷 */
-    if (playerCastleHP <= 0) { endGame(false); return; }
-    if (enemyCastleHP <= 0) { endGame(true); return; }
+    // 原始生命值為0的結束條件（保留）
+    if (lives <= 0) { endGame(false); return; }
 
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
-/* 【五】暫停/繼續 */
-function togglePause() {
-    isPaused = !isPaused;
-    const btn = document.getElementById('pause-btn');
-    btn.innerText = isPaused ? '▶ 繼續' : '⏸ 暫停';
-    if (!isPaused && !gameOver) gameLoop();
-    else if (isPaused && gameLoopId) {
-        cancelAnimationFrame(gameLoopId);
-        gameLoopId = null;
+
+/* ==========================================
+   7. 地圖繪製（原始保留）
+   ========================================== */
+function drawMap() {
+    if (!currentMap) return;
+
+    ctx.lineWidth = 44; ctx.strokeStyle = currentMap.pathColor;
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
+    for (let i = 1; i < pathPoints.length; i++) ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
+    ctx.stroke();
+
+    ctx.lineWidth = 36; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
+
+    ctx.font = '28px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🌀', pathPoints[0].x, pathPoints[0].y);
+    ctx.fillText('🏰', pathPoints[pathPoints.length - 1].x, pathPoints[pathPoints.length - 1].y);
+
+    ctx.font = 'bold 28px "Noto Sans TC"';
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.textAlign = 'right';
+    ctx.fillText(currentMap.name, (canvas.width / zoomLevel) - 20, 38);
+}
+
+
+/* ==========================================
+   8. 波次邏輯（原始保留）
+   ========================================== */
+function handleWaveLogic() {
+    const bossConfig    = BOSS_SUBJECTS[currentWave % 5];
+    const totalSmall    = 10 + currentWave * 2;
+    const spawnInterval = Math.max(30, 45 - currentWave * 1);
+
+    if (!bossSpawned) {
+        spawnTimer++;
+        if (spawnTimer >= spawnInterval && smallEnemySpawned < totalSmall) {
+            spawnEnemy(false, currentWave);
+            smallEnemySpawned++;
+            spawnTimer = 0;
+        } else if (smallEnemySpawned >= totalSmall && enemies.length === 0) {
+            const warnEl = document.getElementById('boss-warning');
+            warnEl.innerHTML = `⚠️ 第${currentWave + 1}關【${bossConfig.label}${bossConfig.emoji}】大魔王 來襲！ ⚠️`;
+            warnEl.classList.remove('hidden', 'border-green-500', 'text-green-600');
+            warnEl.classList.add('border-red-600', 'text-red-600');
+            playSound('boss');
+            setTimeout(() => { spawnEnemy(true, currentWave, bossConfig); }, 2500);
+            bossSpawned = true;
+        }
+    } else if (enemies.length === 0 && bossSpawned) {
+        waveActive = false;
+        money += 60;
+
+        const warnEl = document.getElementById('boss-warning');
+        warnEl.innerHTML = `✅ 攻破【${bossConfig.label}】！獎勵 +$60，全軍轉移陣地...`;
+        warnEl.classList.remove('border-red-600', 'text-red-600');
+        warnEl.classList.add('border-green-500', 'text-green-600');
+        warnEl.classList.remove('hidden');
+
+        currentWave++;
+        setTimeout(() => { warnEl.classList.add('hidden'); startWave(); }, 3500);
     }
 }
 
-/* 【四】縮放 */
-function zoomIn() { zoomLevel = Math.min(2.0, zoomLevel + 0.1); }
-function zoomOut() { zoomLevel = Math.max(0.5, zoomLevel - 0.1); }
+function spawnEnemy(isBoss, waveIndex, bossConfig) {
+    const diff = 1.0 + waveIndex * 0.4;
+    let emoji, hp, speed, size, reward, atk, baseDamage, atkSpeed;
+
+    if (isBoss) {
+        emoji      = bossConfig.emoji;
+        hp         = 700 * diff;
+        speed      = 0.35 + waveIndex * 0.025;
+        size       = 36;
+        reward     = 250 + waveIndex * 50;
+        atk        = 18 + Math.floor(waveIndex * 2.5);
+        atkSpeed   = 65;
+        baseDamage = 8;
+    } else {
+        const m    = MINIONS[Math.floor(Math.random() * MINIONS.length)];
+        emoji      = m.emoji;
+        hp         = 110 * m.hpMult * diff;
+        speed      = (1.0 + Math.random() * 0.3) * m.spdMult + waveIndex * 0.06;
+        size       = 16;
+        reward     = m.rwd;
+        atk        = m.atk + Math.floor(waveIndex * 1.2);
+        atkSpeed   = 50;
+        baseDamage = 1;
+    }
+
+    enemies.push({
+        x: pathPoints[0].x, y: pathPoints[0].y,
+        pathIndex: 0,
+        emoji, hp, maxHp: hp, speed, baseSpeed: speed,
+        size, reward, isBoss, atk, atkSpeed,
+        atkCooldown: atkSpeed,
+        baseDamage,
+        slowFactor: 1.0, slowTimer: 0,
+        state: 'moving'
+    });
+}
+
 
 /* ==========================================
-   6. 敵人與忍者更新（新增城堡攻擊）
+   9. 敵人更新（新增：到達終點時扣城堡HP）
    ========================================== */
 function handleEnemies() {
-    /* 原有移動/戰鬥 ... */
-    if (!target) {
-        /* 到達玩家城堡 */
-        playerCastleHP -= e.baseDamage;
-        /* ... 原有震動 ... */
-        toRemove.push(e);
+    const toRemove = [];
+
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+
+        let closestNinja = null, closestDist = Infinity;
+        for (const n of playerUnits) {
+            const d = Math.hypot(e.x - n.x, e.y - n.y);
+            if (d < FIGHT_RANGE && d < closestDist) { closestDist = d; closestNinja = n; }
+        }
+
+        if (closestNinja) {
+            e.state = 'fighting';
+            e.atkCooldown--;
+            if (e.atkCooldown <= 0) {
+                closestNinja.hp -= e.atk;
+                e.atkCooldown = e.atkSpeed;
+                playSound('hit');
+                spawnParticles(closestNinja.x, closestNinja.y, '#ff4444', 4);
+                if (closestNinja.hp <= 0) {
+                    const ni = playerUnits.indexOf(closestNinja);
+                    if (ni > -1) playerUnits.splice(ni, 1);
+                }
+            }
+        } else {
+            e.state = 'moving';
+            if (e.slowTimer > 0) { e.slowTimer--; } else { e.slowFactor = 1.0; }
+            const spd = e.baseSpeed * e.slowFactor;
+
+            const target = pathPoints[e.pathIndex + 1];
+            if (target) {
+                const dx = target.x - e.x, dy = target.y - e.y, dist = Math.hypot(dx, dy);
+                if (dist < spd) { e.x = target.x; e.y = target.y; e.pathIndex++; }
+                else { e.x += (dx / dist) * spd; e.y += (dy / dist) * spd; }
+            } else {
+                // 【二】敵人到達玩家城堡：扣玩家城堡HP + 原始生命值邏輯
+                lives -= e.baseDamage;
+                playerCastleHP -= e.isBoss ? 100 : 20; // Boss扣100，小兵扣20
+                playerCastleHP = Math.max(0, playerCastleHP);
+
+                playSound('hit');
+                canvas.style.transform = "translate(4px,4px)";
+                setTimeout(() => canvas.style.transform = "none", 50);
+                toRemove.push(e);
+
+                // 【二】玩家城堡HP歸零：遊戲失敗
+                if (playerCastleHP <= 0) { endGame(false); return; }
+                continue;
+            }
+        }
+
+        drawEnemy(e);
     }
+
+    toRemove.forEach(e => { const idx = enemies.indexOf(e); if (idx > -1) enemies.splice(idx, 1); });
 }
 
-function handlePlayerUnits() {
-    /* 原有 ... */
-    if (n.pathIndex < 0) {
-        /* 【二】到達敵方城堡 → 扣敵方城堡HP */
-        enemyCastleHP -= Math.floor(n.atk * 0.7) + 30;
-        toRemove.push(n);
+function drawEnemy(e) {
+    if (e.isBoss) {
+        ctx.shadowColor = "rgba(255,0,0,0.7)"; ctx.shadowBlur = 18;
+        ctx.font = 'bold 11px "Noto Sans TC"'; ctx.fillStyle = '#dc2626'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('👹BOSS', e.x, e.y - e.size - 22);
     }
+
+    ctx.font = `${e.size * 2}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(e.emoji, e.x, e.y);
+    ctx.shadowBlur = 0;
+
+    if (e.state === 'fighting') {
+        ctx.font = '12px Arial'; ctx.fillText('⚔️', e.x + e.size + 5, e.y - e.size + 2);
+    }
+
+    const bw = e.size * 2;
+    ctx.fillStyle = '#dc2626'; ctx.fillRect(e.x - e.size, e.y - e.size - 12, bw, 7);
+    ctx.fillStyle = e.isBoss ? '#facc15' : '#22c55e';
+    ctx.fillRect(e.x - e.size, e.y - e.size - 12, bw * Math.max(0, e.hp / e.maxHp), 7);
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+    ctx.strokeRect(e.x - e.size, e.y - e.size - 12, bw, 7);
 }
+
 
 /* ==========================================
-   7. UI 更新（新增城堡HP顯示）
+   10. 玩家忍者更新（新增：到達路徑起點扣敵方城堡HP）
+   ========================================== */
+function handlePlayerUnits() {
+    const toRemove = [];
+
+    for (let i = 0; i < playerUnits.length; i++) {
+        const n = playerUnits[i];
+        if (n.hp <= 0) { toRemove.push(n); continue; }
+
+        let closestEnemy = null, closestDist = Infinity;
+        for (const e of enemies) {
+            const d = Math.hypot(n.x - e.x, n.y - e.y);
+            if (d < FIGHT_RANGE && d < closestDist) { closestDist = d; closestEnemy = e; }
+        }
+
+        if (closestEnemy) {
+            n.state = 'fighting';
+            n.atkCooldown--;
+            if (n.atkCooldown <= 0) {
+                let dmg = n.atk;
+                if (closestEnemy.isBoss) dmg *= 0.65;
+
+                if (n.areaAtk) {
+                    enemies.forEach(e2 => {
+                        if (Math.hypot(n.x - e2.x, n.y - e2.y) < FIGHT_RANGE + 20) {
+                            const d2 = e2.isBoss ? dmg * 0.65 : dmg;
+                            e2.hp -= d2;
+                        }
+                    });
+                } else {
+                    closestEnemy.hp -= dmg;
+                }
+
+                if (n.slowEffect) {
+                    closestEnemy.slowTimer = 90;
+                    closestEnemy.slowFactor = n.slowEffect;
+                }
+
+                n.atkCooldown = n.atkSpeed;
+                playSound('shoot');
+                spawnParticles(closestEnemy.x, closestEnemy.y, n.color, 3);
+
+                const deadEnemies = enemies.filter(e => e.hp <= 0);
+                deadEnemies.forEach(e => {
+                    money += e.reward;
+                    spawnParticles(e.x, e.y, '#facc15', 8);
+                    const idx = enemies.indexOf(e);
+                    if (idx > -1) enemies.splice(idx, 1);
+                });
+            }
+        } else {
+            n.state = 'moving';
+            if (n.pathIndex >= 0) {
+                const target = pathPoints[n.pathIndex];
+                const dx = target.x - n.x, dy = target.y - n.y, dist = Math.hypot(dx, dy);
+                if (dist < n.speed) { n.x = target.x; n.y = target.y; n.pathIndex--; }
+                else { n.x += (dx / dist) * n.speed; n.y += (dy / dist) * n.speed; }
+            } else {
+                // 【二】忍者到達敵方城堡（路徑起點）：扣敵方城堡HP
+                enemyCastleHP -= 50; // 每位忍者突破城牆扣50HP
+                enemyCastleHP = Math.max(0, enemyCastleHP);
+                spawnParticles(pathPoints[0].x, pathPoints[0].y, '#facc15', 10);
+                toRemove.push(n);
+
+                // 【二】敵方城堡HP歸零：遊戲勝利（提前）
+                if (enemyCastleHP <= 0) { endGame(true); return; }
+                continue;
+            }
+        }
+
+        drawNinja(n);
+    }
+
+    toRemove.forEach(n => { const idx = playerUnits.indexOf(n); if (idx > -1) playerUnits.splice(idx, 1); });
+}
+
+function drawNinja(n) {
+    const def = NINJA_TYPES[n.type];
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = n.color; ctx.lineWidth = 3; ctx.stroke();
+
+    if (n.state === 'fighting') {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 22 + (frameCount % 8 < 4 ? 2 : 0), 0, Math.PI * 2);
+        ctx.strokeStyle = n.color + '88'; ctx.lineWidth = 2; ctx.stroke();
+    }
+
+    ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.emoji, n.x, n.y);
+
+    ctx.font = 'bold 10px "Noto Sans TC"'; ctx.fillStyle = n.color;
+    ctx.shadowColor = 'white'; ctx.shadowBlur = 3;
+    ctx.fillText(n.rank, n.x, n.y - 28);
+    ctx.shadowBlur = 0;
+
+    const bw = 36;
+    ctx.fillStyle = '#dc2626'; ctx.fillRect(n.x - bw / 2, n.y - 38, bw, 5);
+    ctx.fillStyle = '#22c55e'; ctx.fillRect(n.x - bw / 2, n.y - 38, bw * Math.max(0, n.hp / n.maxHp), 5);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(n.x - bw / 2, n.y - 38, bw, 5);
+}
+
+
+/* ==========================================
+   11. 粒子特效（原始保留）
+   ========================================== */
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 2.5;
+        particles.push({
+            x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            color, alpha: 1.0, size: 3 + Math.random() * 3, life: 25
+        });
+    }
+}
+
+function handleParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.1;
+        p.life--; p.alpha = p.life / 25;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+
+/* ==========================================
+   12. UI 更新（原始保留）
    ========================================== */
 function updateUI() {
     document.getElementById('ui-money').innerText = money;
-    document.getElementById('ui-player-castle').innerText = Math.max(0, playerCastleHP);
-    document.getElementById('ui-enemy-castle').innerText = Math.max(0, enemyCastleHP);
+    document.getElementById('ui-lives').innerText = Math.max(0, lives);
+    document.getElementById('ui-max-lives').innerText = maxLives;
     document.getElementById('ui-lord-level').innerText = lordLevel;
     document.getElementById('ui-lord-cost').innerText = lordUpgradeCost;
-    
-    /* 原有波次顯示 ... */
+
+    const upgBtn = document.querySelector('button[onclick="upgradeLord()"]');
+    if (money < lordUpgradeCost) upgBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    else upgBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+    const displayWave = Math.min(10, currentWave + 1);
+    const waveEl = document.getElementById('ui-wave');
+    if (bossSpawned && enemies.length > 0) {
+        waveEl.innerHTML = `👹魔王 <span class="text-sm">(${displayWave}/10)</span>`;
+        waveEl.className = "text-red-400 animate-pulse font-black";
+    } else {
+        waveEl.innerText = `${displayWave}/10`;
+        waveEl.className = "text-cyan-400";
+    }
+}
+
+function updateDeployButtons() {
+    Object.keys(NINJA_TYPES).forEach(type => {
+        const def      = NINJA_TYPES[type];
+        const level    = ninjaLevels[type];
+        const lvlData  = def.levels[level];
+        const cd       = deployCooldowns[type] || 0;
+        const cdMax    = def.deployCooldown;
+        const canDeploy = money >= def.cost && cd === 0;
+
+        const btn     = document.getElementById(`btn-deploy-${type}`);
+        const overlay = document.getElementById(`cd-overlay-${type}`);
+        const label   = document.getElementById(`cd-label-${type}`);
+        const lvEl    = document.getElementById(`lv-${type}`);
+        const upgBtn  = document.getElementById(`upg-btn-${type}`);
+
+        if (cd > 0) {
+            btn.classList.add('on-cooldown');
+            const pct = (cd / cdMax) * 100;
+            overlay.style.height = pct + '%';
+            label.innerText = Math.ceil(cd / 60) + 's';
+        } else {
+            btn.classList.remove('on-cooldown');
+            overlay.style.height = '0%';
+            label.innerText = '';
+        }
+
+        lvEl.innerText = `Lv.${level + 1} ${lvlData.rank}`;
+
+        if (!lvlData.upCost) {
+            upgBtn.innerText = '✅滿級';
+            upgBtn.disabled = true;
+            upgBtn.classList.add('opacity-50', 'cursor-default');
+        } else {
+            const canUpg = money >= lvlData.upCost;
+            upgBtn.innerText = `⬆ $${lvlData.upCost}`;
+            upgBtn.disabled = false;
+            if (canUpg) upgBtn.classList.remove('opacity-50');
+            else upgBtn.classList.add('opacity-50');
+        }
+
+        if (!canDeploy && cd === 0) btn.style.borderColor = '#fca5a5';
+        else if (cd === 0) btn.style.borderColor = '#bbf7d0';
+        else btn.style.borderColor = 'transparent';
+    });
 }
 
 /* ==========================================
-   8. 結算（使用城堡HP判斷勝負）
+   【二】城堡HP條更新（新增）
+   ========================================== */
+function updateCastleHPBar() {
+    const pPct = Math.max(0, (playerCastleHP / MAX_CASTLE_HP) * 100);
+    const ePct = Math.max(0, (enemyCastleHP  / MAX_CASTLE_HP) * 100);
+
+    document.getElementById('player-castle-bar').style.width = pPct + '%';
+    document.getElementById('enemy-castle-bar').style.width  = ePct + '%';
+    document.getElementById('ui-player-castle-hp').innerText = Math.ceil(playerCastleHP);
+    document.getElementById('ui-enemy-castle-hp').innerText  = Math.ceil(enemyCastleHP);
+
+    // HP低時改色警示
+    const pBar = document.getElementById('player-castle-bar');
+    if (pPct < 30) { pBar.classList.replace('bg-green-400', 'bg-red-400'); }
+    else { pBar.classList.replace('bg-red-400', 'bg-green-400'); }
+}
+
+
+/* ==========================================
+   13. 結算與存檔（原始保留，新增城堡勝敗訊息）
    ========================================== */
 function endGame(isWin) {
     gameOver = true;
+    // 【五】結束時也取消暫停 rAF
+    isPaused = false;
+    if (gameLoopId) cancelAnimationFrame(gameLoopId);
+
     document.getElementById('boss-warning').classList.add('hidden');
     showScreen('result-screen');
     document.getElementById('result-player').innerText = `君主：${currentPlayer.name} (Lv.${lordLevel})`;
     const titleEl = document.getElementById('result-title');
     if (isWin) {
-        titleEl.innerText = "🏆 成功攻破敵方城堡！稱霸會考！";
+        playSound('boss');
+        // 判斷是十關通關還是攻破敵方城堡
+        if (enemyCastleHP <= 0) {
+            titleEl.innerText = "🏰 攻破敵方城堡！忍界稱霸！";
+        } else {
+            titleEl.innerText = "🏆 登峰造極！稱霸會考十關！";
+        }
         titleEl.className = "text-4xl font-black text-green-500 mb-2";
     } else {
-        titleEl.innerText = `💥 玩家城堡淪陷...止步於第 ${currentWave + 1} 關`;
+        playSound('hit');
+        // 判斷是生命值歸零還是城堡被攻破
+        if (playerCastleHP <= 0) {
+            titleEl.innerText = `💥 我方城堡淪陷！止步於第 ${Math.min(currentWave + 1, 10)} 關`;
+        } else {
+            titleEl.innerText = `💥 城堡淪陷...止步於第 ${Math.min(currentWave + 1, 10)} 關`;
+        }
         titleEl.className = "text-4xl font-black text-red-500 mb-2";
+    }
+
+    // 結束後還原 currentPlayer.stats 為原始值（不保留強化）
+    if (currentPlayer._baseStats) {
+        currentPlayer.stats = { ...currentPlayer._baseStats };
+        delete currentPlayer._baseStats;
     }
 }
 
-/* 其餘所有函式（drawMap、handleWaveLogic、spawnEnemy、updateDeployButtons、saveDataAndRestart 等）完全保留原樣 */
+async function saveDataAndRestart() {
+    const gameData = {
+        playerName: currentPlayer.name,
+        result: lives > 0 ? 'WIN_10' : `LOSE_AT_WAVE_${Math.min(currentWave + 1, 10)}`,
+        remainingLives: Math.max(0, lives),
+        lordLevel, moneyEarned: money,
+        timestamp: new Date().toISOString()
+    };
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.innerText = "資料上傳中..."; saveBtn.disabled = true;
+
+    try {
+        await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify(gameData),
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        alert(`✅ 戰績存檔成功！\n君主等級：Lv.${lordLevel}\n最終關卡：${Math.min(currentWave + 1, 10)}`);
+    } catch (err) { alert("❌ 儲存失敗，請檢查網路連線。"); }
+
+    saveBtn.innerText = "儲存紀錄並返回"; saveBtn.disabled = false;
+    document.getElementById('player-name').value = '';
+    showScreen('login-screen');
+}
 </script>
 </body>
 </html>
