@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>忍界學習守衛戰：Learning Ninja TD</title>
+    <title>忍界學習守衛戰：Learning Ninja TD (極限十關版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f0fdf4; /* 淺綠底色 */
+            background-color: #f0fdf4;
             overflow: hidden;
             touch-action: none;
         }
@@ -18,6 +18,7 @@
             display: none;
             position: absolute;
             top: 0; left: 0; width: 100vw; height: 100vh;
+            overflow-y: auto;
         }
         .screen.active {
             display: flex;
@@ -40,7 +41,6 @@
         .btn:active {
             transform: scale(0.95);
         }
-        /* 塔的選擇 UI */
         .tower-btn {
             cursor: pointer;
             border: 3px solid transparent;
@@ -49,6 +49,9 @@
             border-color: #fbbf24;
             background-color: #fef3c7;
         }
+        /* 隱藏捲軸但允許滾動 (為小螢幕的 Dashboard 設計) */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -57,7 +60,7 @@
     <div id="login-screen" class="screen active flex-col items-center justify-center bg-gradient-to-br from-green-400 to-blue-500">
         <div class="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-md w-full mx-4">
             <h1 class="text-4xl font-black text-green-700 mb-2">🥷 忍界學習守衛戰</h1>
-            <p class="text-gray-500 mb-8 font-bold">Learning Ninja TD</p>
+            <p class="text-gray-500 mb-8 font-bold">極限十關 - 管理者晉升之路</p>
             
             <div class="mb-6">
                 <input type="text" id="player-name" placeholder="請輸入忍者姓名 (如: 小明)" 
@@ -67,55 +70,47 @@
             <button id="login-btn" onclick="login()" class="btn w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-xl shadow-lg hover:bg-green-500">
                 進入忍界 (讀取數據)
             </button>
-            <p class="mt-4 text-sm text-gray-400">測試帳號：小明、小華、小美 (或隨機輸入生成數據)</p>
+            <p class="mt-4 text-sm text-gray-400">測試帳號：小明、小華、小美</p>
         </div>
     </div>
 
     <!-- 2️⃣ 數據面板 (雷達圖) -->
-    <div id="dashboard-screen" class="screen flex-col items-center justify-center bg-gray-50">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl mx-4 flex flex-col items-center">
-            <h2 class="text-3xl font-black text-gray-800 mb-2">📊 忍者能力鑑定報告</h2>
-            <p id="ninja-title" class="text-xl text-green-600 font-bold mb-6">Lv.1 入門忍者 - 玩家</p>
+    <div id="dashboard-screen" class="screen flex-col items-center justify-start py-10 bg-gray-50">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-4xl mx-4 flex flex-col items-center">
+            <h2 class="text-3xl font-black text-gray-800 mb-2">📊 忍者全方位能力鑑定</h2>
+            <p id="ninja-title" class="text-xl text-green-600 font-bold mb-4">Lv.1 入門忍者 - 玩家</p>
             
-            <div class="w-full max-w-md mb-6 relative">
+            <div class="w-full max-w-lg mb-4 relative">
                 <canvas id="radar-chart"></canvas>
             </div>
             
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 w-full text-center">
-                <div class="bg-red-50 p-3 rounded-lg border border-red-200">
-                    <p class="text-red-600 font-bold">🔥火遁(程式)</p>
-                    <p id="stat-fire" class="text-2xl font-black text-gray-800">0</p>
-                </div>
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <p class="text-blue-600 font-bold">💧水遁(資料)</p>
-                    <p id="stat-water" class="text-2xl font-black text-gray-800">0</p>
-                </div>
-                <div class="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <p class="text-green-600 font-bold">🌳木遁(專題)</p>
-                    <p id="stat-wood" class="text-2xl font-black text-gray-800">0</p>
-                </div>
-                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    <p class="text-yellow-600 font-bold">🪨土遁(系統)</p>
-                    <p id="stat-earth" class="text-2xl font-black text-gray-800">0</p>
-                </div>
-                <div class="bg-gray-100 p-3 rounded-lg border border-gray-300">
-                    <p class="text-gray-600 font-bold">🌪風遁(邏輯)</p>
-                    <p id="stat-wind" class="text-2xl font-black text-gray-800">0</p>
-                </div>
+            <!-- 10科能力網格 -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 w-full text-center text-sm">
+                <div class="bg-red-50 p-2 rounded-lg border border-red-200"><p class="text-red-600 font-bold">🔥程式</p><p id="stat-programming" class="text-xl font-black">0</p></div>
+                <div class="bg-blue-50 p-2 rounded-lg border border-blue-200"><p class="text-blue-600 font-bold">💧資料</p><p id="stat-data" class="text-xl font-black">0</p></div>
+                <div class="bg-green-50 p-2 rounded-lg border border-green-200"><p class="text-green-600 font-bold">🌳專題</p><p id="stat-project" class="text-xl font-black">0</p></div>
+                <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-200"><p class="text-yellow-600 font-bold">🪨系統</p><p id="stat-system" class="text-xl font-black">0</p></div>
+                <div class="bg-gray-100 p-2 rounded-lg border border-gray-300"><p class="text-gray-600 font-bold">🌪邏輯</p><p id="stat-logic" class="text-xl font-black">0</p></div>
+                
+                <div class="bg-purple-50 p-2 rounded-lg border border-purple-200"><p class="text-purple-600 font-bold">📜國文</p><p id="stat-chinese" class="text-xl font-black">0</p></div>
+                <div class="bg-cyan-50 p-2 rounded-lg border border-cyan-200"><p class="text-cyan-600 font-bold">🔤英文</p><p id="stat-english" class="text-xl font-black">0</p></div>
+                <div class="bg-orange-50 p-2 rounded-lg border border-orange-200"><p class="text-orange-600 font-bold">📐數學</p><p id="stat-math" class="text-xl font-black">0</p></div>
+                <div class="bg-amber-50 p-2 rounded-lg border border-amber-200"><p class="text-amber-600 font-bold">🌍社會</p><p id="stat-social" class="text-xl font-black">0</p></div>
+                <div class="bg-teal-50 p-2 rounded-lg border border-teal-200"><p class="text-teal-600 font-bold">🔬自然</p><p id="stat-science" class="text-xl font-black">0</p></div>
             </div>
 
             <button onclick="startGame()" class="btn bg-indigo-600 text-white font-bold py-3 px-10 rounded-full text-xl shadow-lg hover:bg-indigo-500 animate-pulse">
-                ⚔️ 開始塔防守衛戰
+                ⚔️ 開始十關塔防戰
             </button>
         </div>
     </div>
 
     <!-- 3️⃣ 遊戲畫面 -->
-    <div id="game-screen" class="screen flex-col items-center justify-center bg-gray-800">
+    <div id="game-screen" class="screen flex-col items-center justify-center bg-gray-900">
         <div class="w-full max-w-4xl flex justify-between items-center px-4 py-2 text-white font-bold mb-2">
-            <div class="text-xl">💰 查克拉: <span id="ui-money" class="text-yellow-400">100</span></div>
+            <div class="text-xl">💰 資金: <span id="ui-money" class="text-yellow-400">150</span></div>
             <div class="text-xl">❤️ 村莊血量: <span id="ui-lives" class="text-red-400">10</span></div>
-            <div class="text-xl">👾 關卡進度: <span id="ui-wave">1/1</span></div>
+            <div class="text-xl text-center">👾 關卡進度<br><span id="ui-wave" class="text-2xl text-cyan-400">1/10</span></div>
         </div>
 
         <div id="game-container" class="relative">
@@ -123,26 +118,26 @@
             <canvas id="game-canvas" width="800" height="500"></canvas>
             
             <!-- 塔選擇工具列 -->
-            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 px-6 py-3 rounded-2xl shadow-lg flex gap-4 border-2 border-gray-200">
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/95 px-6 py-3 rounded-2xl shadow-lg flex gap-4 border-2 border-gray-200">
                 <div onclick="selectTower('fire')" id="btn-tower-fire" class="tower-btn flex flex-col items-center p-2 rounded-xl selected">
                     <div class="text-3xl">🔥</div>
-                    <div class="text-xs font-bold text-red-600 mt-1">火塔(高傷)</div>
+                    <div class="text-xs font-bold text-red-600 mt-1">程式(高傷)</div>
                     <div class="text-xs font-bold text-gray-500">$50</div>
                 </div>
                 <div onclick="selectTower('water')" id="btn-tower-water" class="tower-btn flex flex-col items-center p-2 rounded-xl">
                     <div class="text-3xl">💧</div>
-                    <div class="text-xs font-bold text-blue-600 mt-1">水塔(減速)</div>
+                    <div class="text-xs font-bold text-blue-600 mt-1">資料(減速)</div>
                     <div class="text-xs font-bold text-gray-500">$50</div>
                 </div>
                 <div onclick="selectTower('wood')" id="btn-tower-wood" class="tower-btn flex flex-col items-center p-2 rounded-xl">
                     <div class="text-3xl">🌳</div>
-                    <div class="text-xs font-bold text-green-600 mt-1">木塔(連發)</div>
+                    <div class="text-xs font-bold text-green-600 mt-1">專題(連發)</div>
                     <div class="text-xs font-bold text-gray-500">$50</div>
                 </div>
             </div>
             
-            <div id="boss-warning" class="hidden absolute top-10 left-1/2 transform -translate-x-1/2 text-4xl font-black text-red-600 animate-bounce drop-shadow-lg text-stroke">
-                ⚠️ 資訊 AI 主宰者 來襲！ ⚠️
+            <div id="boss-warning" class="hidden absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl font-black text-red-600 animate-bounce drop-shadow-2xl bg-white/90 px-6 py-4 rounded-3xl border-4 border-red-500 whitespace-nowrap z-50">
+                ⚠️ 程式設計 大魔王 來襲！ ⚠️
             </div>
         </div>
     </div>
@@ -154,54 +149,114 @@
             <p id="result-player" class="text-xl font-bold text-gray-600 mb-6">玩家：小明</p>
             
             <div class="bg-gray-100 rounded-xl p-6 mb-6">
-                <h3 class="text-lg font-bold text-gray-700 border-b-2 border-gray-300 pb-2 mb-4">🧠 學習能力分析與建議</h3>
-                <p id="result-analysis" class="text-left text-gray-800 font-medium leading-relaxed mb-4">
-                    你的火屬性（程式設計）非常強大，在戰鬥中提供了極高的輸出！
-                </p>
+                <h3 class="text-lg font-bold text-gray-700 border-b-2 border-gray-300 pb-2 mb-4">🧠 戰後能力分析</h3>
+                <p id="result-analysis" class="text-left text-gray-800 font-medium leading-relaxed mb-4"></p>
                 <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 text-left">
                     <p class="font-bold text-yellow-700 text-sm">💡 系統建議加強：</p>
-                    <p id="result-suggestion" class="text-yellow-800 font-bold mt-1">
-                        水屬性（資料處理與分析）偏弱，建議複習「試算表與資料圖表化」單元。
-                    </p>
+                    <p id="result-suggestion" class="text-yellow-800 font-bold mt-1"></p>
                 </div>
             </div>
             
             <button id="save-btn" onclick="saveDataAndRestart()" class="btn w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-xl shadow-lg hover:bg-green-400">
-                儲存紀錄並返回
+                儲存戰績並返回
             </button>
-            <p class="mt-4 text-xs text-gray-400 font-mono">✅ Google Apps Script 儲存準備就緒</p>
+            <p class="mt-4 text-xs text-gray-400 font-mono">✅ 準備連線 Google Apps Script 雲端伺服器</p>
         </div>
     </div>
 
     <script>
         /* ==========================================
-           1. 模擬資料庫 (JSON 讀取)
+           0. 音效系統 (純 JS 合成 Web Audio API)
            ========================================== */
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'shoot') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'boss') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.setValueAtTime(600, now + 0.2);
+                osc.frequency.setValueAtTime(300, now + 0.4);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.8);
+                osc.start(now); osc.stop(now + 0.8);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now); // A4
+                osc.frequency.setValueAtTime(554, now + 0.2); // C#5
+                osc.frequency.setValueAtTime(659, now + 0.4); // E5
+                osc.frequency.setValueAtTime(880, now + 0.6); // A5
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 1.2);
+                osc.start(now); osc.stop(now + 1.2);
+            } else if (type === 'lose') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 1);
+                osc.start(now); osc.stop(now + 1);
+            }
+        }
+
+        /* ==========================================
+           1. 模擬資料庫與 10大能力設定
+           ========================================== */
+        // 加入 10 大科目成績
         const mockDatabase = {
-            "小明": { programming: 85, data: 60, project: 90, system: 75, logic: 80 },
-            "小華": { programming: 65, data: 95, project: 70, system: 85, logic: 90 },
-            "小美": { programming: 95, data: 90, project: 85, system: 90, logic: 95 }
+            "小明": { programming: 85, data: 60, project: 90, system: 75, logic: 80, chinese: 70, english: 65, math: 88, social: 72, science: 81 },
+            "小華": { programming: 65, data: 95, project: 70, system: 85, logic: 90, chinese: 88, english: 92, math: 60, social: 85, science: 75 },
+            "小美": { programming: 95, data: 90, project: 85, system: 90, logic: 95, chinese: 92, english: 95, math: 98, social: 90, science: 96 }
         };
 
         let currentPlayer = {
             name: "",
-            stats: { programming: 0, data: 0, project: 0, system: 0, logic: 0 },
+            stats: {},
             levelStr: ""
         };
 
-        // 屬性對應表
         const statConfig = [
-            { key: 'programming', label: '程式設計(火)', color: 'rgba(239, 68, 68, 1)' },
-            { key: 'data', label: '資料處理(水)', color: 'rgba(59, 130, 246, 1)' },
-            { key: 'project', label: '專題創作(木)', color: 'rgba(34, 197, 94, 1)' },
-            { key: 'system', label: '系統理解(土)', color: 'rgba(234, 179, 8, 1)' },
-            { key: 'logic', label: '問題解決(風)', color: 'rgba(156, 163, 175, 1)' }
+            { key: 'programming', label: '程式設計', emoji: '💻' },
+            { key: 'data', label: '資料處理', emoji: '📊' },
+            { key: 'project', label: '專題創作', emoji: '💡' },
+            { key: 'system', label: '系統理解', emoji: '⚙️' },
+            { key: 'logic', label: '問題解決', emoji: '🧩' },
+            { key: 'chinese', label: '國文', emoji: '📜' },
+            { key: 'english', label: '英文', emoji: '🔤' },
+            { key: 'math', label: '數學', emoji: '📐' },
+            { key: 'social', label: '社會', emoji: '🌍' },
+            { key: 'science', label: '自然', emoji: '🔬' }
         ];
 
         /* ==========================================
            2. 流程與 UI 控制 (GAS 串接更新)
            ========================================== */
-        // 👇 在這裡填入您部署 Google Apps Script 後取得的 Web App URL
+        // ✅ 用戶指定的最新的 GAS 網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbz9vOO1WaJLvXMbZEs55WMIqeRuVVuijHuTESNG642ppCq8m-sGBHhETdbvMo5T7AYTBw/exec";
 
         function showScreen(id) {
@@ -210,6 +265,8 @@
         }
 
         async function login() {
+            initAudio(); // 初始化音效引擎
+            
             const nameInput = document.getElementById('player-name').value.trim();
             if (!nameInput) {
                 alert("請輸入忍者姓名！");
@@ -223,28 +280,25 @@
             loginBtn.disabled = true;
 
             try {
-                if (GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
-                    throw new Error("尚未設定 GAS URL，使用本地模擬數據");
-                }
-
-                // 呼叫 GAS 讀取數據 (GET 請求)
+                // 呼叫 GAS 讀取數據
                 const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(nameInput)}`);
                 const result = await response.json();
 
-                if (result.success) {
+                if (result.success && result.data) {
                     currentPlayer.stats = result.data;
+                    // 如果 GAS 只有 5 科，這裡幫他補滿 10 科假資料避免錯誤
+                    statConfig.forEach(s => {
+                        if(currentPlayer.stats[s.key] === undefined) {
+                            currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60;
+                        }
+                    });
                 } else {
-                    alert(`查無此人【${nameInput}】，將生成隨機模擬數據進行遊戲。`);
-                    generateRandomStats();
+                    console.log("找不到資料或尚未設定完整，生成模擬數據。");
+                    generateRandomStats(nameInput);
                 }
             } catch (error) {
-                console.log(error.message);
-                // 離線或未設定 URL 時的備用方案
-                if (mockDatabase[nameInput]) {
-                    currentPlayer.stats = mockDatabase[nameInput];
-                } else {
-                    generateRandomStats();
-                }
+                console.log("離線或API未準備好:", error.message);
+                generateRandomStats(nameInput);
             }
 
             loginBtn.innerText = originalText;
@@ -255,26 +309,32 @@
             showScreen('dashboard-screen');
         }
 
-        function generateRandomStats() {
-            currentPlayer.stats = {
-                programming: Math.floor(Math.random() * 35) + 60,
-                data: Math.floor(Math.random() * 35) + 60,
-                project: Math.floor(Math.random() * 35) + 60,
-                system: Math.floor(Math.random() * 35) + 60,
-                logic: Math.floor(Math.random() * 35) + 60,
-            };
+        function generateRandomStats(name) {
+            if (mockDatabase[name]) {
+                currentPlayer.stats = mockDatabase[name];
+            } else {
+                currentPlayer.stats = {};
+                statConfig.forEach(s => {
+                    currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60;
+                });
+            }
         }
 
         function calculateLevel() {
             const stats = Object.values(currentPlayer.stats);
             const avg = stats.reduce((a, b) => a + b) / stats.length;
             let title = "";
+            // 升級設定：包含幹部與管理者
             if (avg < 60) title = "🌱 入門忍者";
             else if (avg < 70) title = "⚔️ 下忍";
             else if (avg < 80) title = "🌀 中忍";
-            else if (avg < 90) title = "🔥 上忍";
-            else if (avg < 96) title = "⚡ 特忍";
-            else title = "👑 超忍";
+            else if (avg < 85) title = "🔥 上忍";
+            else if (avg < 89) title = "⚡ 特忍";
+            else if (avg < 92) title = "👑 超忍";
+            else if (avg < 95) title = "🦅 暗部隊長 (幹部)";
+            else if (avg < 97) title = "🏛️ 忍村長老 (管理層)";
+            else if (avg < 99) title = "🌟 影級尊者 (村長)";
+            else title = "🌌 六道仙人 (神話)";
             
             currentPlayer.levelStr = `Lv.${Math.floor(avg)} ${title}`;
         }
@@ -282,33 +342,29 @@
         let radarChartInstance = null;
         function updateDashboard() {
             document.getElementById('ninja-title').innerText = `${currentPlayer.levelStr} - ${currentPlayer.name}`;
-            document.getElementById('stat-fire').innerText = currentPlayer.stats.programming;
-            document.getElementById('stat-water').innerText = currentPlayer.stats.data;
-            document.getElementById('stat-wood').innerText = currentPlayer.stats.project;
-            document.getElementById('stat-earth').innerText = currentPlayer.stats.system;
-            document.getElementById('stat-wind').innerText = currentPlayer.stats.logic;
+            
+            // 更新 10 科數值 UI
+            statConfig.forEach(s => {
+                const el = document.getElementById(`stat-${s.key}`);
+                if(el) el.innerText = currentPlayer.stats[s.key];
+            });
 
             const ctx = document.getElementById('radar-chart').getContext('2d');
-            const dataValues = [
-                currentPlayer.stats.programming,
-                currentPlayer.stats.data,
-                currentPlayer.stats.project,
-                currentPlayer.stats.system,
-                currentPlayer.stats.logic
-            ];
+            const dataValues = statConfig.map(s => currentPlayer.stats[s.key]);
+            const labels = statConfig.map(s => s.label);
 
             if (radarChartInstance) radarChartInstance.destroy();
 
             radarChartInstance = new Chart(ctx, {
                 type: 'radar',
                 data: {
-                    labels: ['🔥火(程式)', '💧水(資料)', '🌳木(創作)', '🪨土(系統)', '🌪風(邏輯)'],
+                    labels: labels,
                     datasets: [{
-                        label: '能力數值',
+                        label: '能力鑑定',
                         data: dataValues,
-                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                        borderColor: 'rgba(21, 128, 61, 1)',
-                        pointBackgroundColor: 'rgba(21, 128, 61, 1)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)', // Indigo
+                        borderColor: 'rgba(79, 70, 229, 1)',
+                        pointBackgroundColor: 'rgba(67, 56, 202, 1)',
                         borderWidth: 2,
                     }]
                 },
@@ -316,7 +372,8 @@
                     scales: {
                         r: {
                             min: 0, max: 100,
-                            ticks: { stepSize: 20 }
+                            ticks: { stepSize: 20 },
+                            pointLabels: { font: { size: 12, weight: 'bold' } }
                         }
                     },
                     plugins: { legend: { display: false } }
@@ -325,7 +382,7 @@
         }
 
         /* ==========================================
-           3. 塔防遊戲核心 (Canvas)
+           3. 十關卡與塔防遊戲核心 (Canvas)
            ========================================== */
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
@@ -333,54 +390,63 @@
         
         let gameLoopId;
         let money = 150;
-        let lives = 10;
-        let selectedTowerType = 'fire'; // fire, water, wood
+        let lives = 20; // 提高一點基礎血量，因魔王攻擊力很高
+        let selectedTowerType = 'fire';
         
         let towers = [];
         let enemies = [];
         let projectiles = [];
         
-        // 簡單的 S 型路徑
+        // S 型路徑
         const path = [
             {x: 0, y: 3}, {x: 4, y: 3}, {x: 4, y: 7}, 
             {x: 10, y: 7}, {x: 10, y: 2}, {x: 15, y: 2}
         ];
-        
-        // 將網格座標轉為實際像素 (中心點)
         const pathPoints = path.map(p => ({ x: p.x * GRID_SIZE + 25, y: p.y * GRID_SIZE + 25 }));
 
-        let frameCount = 0;
-        let smallEnemyCount = 0;
+        // 關卡進度控制
+        let currentWave = 0; // 0 to 9 (10 waves)
+        let waveActive = false;
+        let smallEnemySpawned = 0;
         let bossSpawned = false;
+        let frameCount = 0;
         let gameOver = false;
 
         function startGame() {
             showScreen('game-screen');
-            // 初始化數據
-            money = 150 + (currentPlayer.stats.logic / 2); // 邏輯越好，起始資金越多
-            lives = 10 + Math.floor(currentPlayer.stats.system / 20); // 系統理解越高，村莊血越多
+            money = 150 + (currentPlayer.stats.logic / 2); 
+            lives = 20 + Math.floor(currentPlayer.stats.system / 10); 
             towers = [];
             enemies = [];
             projectiles = [];
-            frameCount = 0;
-            smallEnemyCount = 0;
-            bossSpawned = false;
+            currentWave = 0;
             gameOver = false;
-            document.getElementById('boss-warning').classList.add('hidden');
             
-            updateUI();
+            document.getElementById('boss-warning').classList.add('hidden');
             if(gameLoopId) cancelAnimationFrame(gameLoopId);
+            
+            startWave();
             gameLoop();
         }
 
-        // 塔的選擇 UI 切換
+        function startWave() {
+            if (currentWave >= 10) {
+                endGame(true);
+                return;
+            }
+            waveActive = true;
+            smallEnemySpawned = 0;
+            bossSpawned = false;
+            frameCount = 0;
+            updateUI();
+        }
+
         function selectTower(type) {
             selectedTowerType = type;
             document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
             document.getElementById('btn-tower-' + type).classList.add('selected');
         }
 
-        // 點擊畫布放置塔
         canvas.addEventListener('click', (e) => {
             if(gameOver) return;
             const rect = canvas.getBoundingClientRect();
@@ -392,9 +458,8 @@
             const pixelX = gridX * GRID_SIZE + 25;
             const pixelY = gridY * GRID_SIZE + 25;
 
-            // 檢查是否蓋在路徑上
+            // 檢查路徑
             let onPath = false;
-            // 簡易碰撞檢查 (與路徑節點比較)
             for(let i=0; i<path.length-1; i++){
                 let p1 = path[i], p2 = path[i+1];
                 let minX = Math.min(p1.x, p2.x), maxX = Math.max(p1.x, p2.x);
@@ -403,25 +468,22 @@
                     onPath = true; break;
                 }
             }
-            if(onPath) return; // 不能蓋在路徑上
+            if(onPath) return;
 
-            // 檢查是否已經有塔
             if(towers.some(t => Math.abs(t.x - pixelX) < 10 && Math.abs(t.y - pixelY) < 10)) return;
 
-            // 檢查金錢並建造 (受學生成績影響能力)
             if(money >= 50) {
                 money -= 50;
                 let newTower = { x: pixelX, y: pixelY, type: selectedTowerType, cooldown: 0 };
                 
-                // 核心：成績決定塔的能力！
                 if(selectedTowerType === 'fire') {
                     newTower.range = 100;
-                    newTower.damage = 20 * (currentPlayer.stats.programming / 50); // 程式強 = 高傷
+                    newTower.damage = 20 * (currentPlayer.stats.programming / 50); 
                     newTower.fireRate = 60; 
                     newTower.color = '#ef4444';
                     newTower.emoji = '🔥';
                 } else if(selectedTowerType === 'water') {
-                    newTower.range = 80 + (currentPlayer.stats.data); // 資料強 = 範圍廣
+                    newTower.range = 80 + (currentPlayer.stats.data); 
                     newTower.damage = 5;
                     newTower.fireRate = 45;
                     newTower.color = '#3b82f6';
@@ -429,36 +491,29 @@
                 } else if(selectedTowerType === 'wood') {
                     newTower.range = 120;
                     newTower.damage = 8;
-                    // 專題強 = 攻速極快 (冷卻時間短)
                     newTower.fireRate = Math.max(10, 50 - (currentPlayer.stats.project / 2.5)); 
                     newTower.color = '#22c55e';
                     newTower.emoji = '🌳';
                 }
-                
                 towers.push(newTower);
                 updateUI();
             }
         });
 
-        // 遊戲主迴圈
         function gameLoop() {
             if(gameOver) return;
             frameCount++;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawMap();
+            handleWaveLogic();
             handleEnemies();
             handleTowers();
             handleProjectiles();
             updateUI();
 
-            // 檢查結算條件
             if(lives <= 0) {
                 endGame(false);
-                return;
-            }
-            if(bossSpawned && enemies.length === 0) {
-                endGame(true);
                 return;
             }
 
@@ -476,18 +531,75 @@
             }
             ctx.stroke();
             
-            // 起點跟終點圖示
             ctx.font = '24px Arial';
             ctx.fillText('🚪', pathPoints[0].x - 12, pathPoints[0].y + 8);
             ctx.fillText('🏫', pathPoints[pathPoints.length-1].x - 12, pathPoints[pathPoints.length-1].y + 8);
         }
 
-        function spawnEnemy(isBoss) {
-            let hp = isBoss ? 2000 : 100;
-            let speed = isBoss ? 0.5 : 1.5;
-            let size = isBoss ? 25 : 12;
-            let reward = isBoss ? 500 : 15;
-            let emoji = isBoss ? '🤖' : '👾';
+        function handleWaveLogic() {
+            if (!waveActive) return;
+
+            const bossSubject = statConfig[currentWave];
+            const totalSmallEnemies = 10 + currentWave * 2; // 每關小兵變多
+
+            if (!bossSpawned) {
+                // 每 60 幀(約1秒)生一隻小兵
+                if (frameCount % 60 === 0 && smallEnemySpawned < totalSmallEnemies) {
+                    spawnEnemy(false, currentWave);
+                    smallEnemySpawned++;
+                } else if (smallEnemySpawned >= totalSmallEnemies && enemies.length === 0) {
+                    // 小兵清光，生魔王！
+                    const warnEl = document.getElementById('boss-warning');
+                    warnEl.innerHTML = `⚠️ 第${currentWave + 1}關【${bossSubject.label}】大魔王 來襲！ ⚠️`;
+                    warnEl.classList.remove('hidden', 'border-green-500', 'text-green-600');
+                    warnEl.classList.add('border-red-500', 'text-red-600');
+                    playSound('boss');
+                    
+                    setTimeout(() => { spawnEnemy(true, currentWave); }, 2000);
+                    bossSpawned = true;
+                }
+            } else if (enemies.length === 0) {
+                // 魔王被擊殺，這關結束
+                waveActive = false;
+                const warnEl = document.getElementById('boss-warning');
+                warnEl.innerHTML = `✅ 恭喜通過第 ${currentWave + 1} 關！準備進入下一單元...`;
+                warnEl.classList.remove('border-red-500', 'text-red-600');
+                warnEl.classList.add('border-green-500', 'text-green-600');
+                warnEl.classList.remove('hidden');
+                
+                currentWave++;
+                setTimeout(() => { 
+                    warnEl.classList.add('hidden');
+                    startWave(); 
+                }, 3500);
+            }
+        }
+
+        function spawnEnemy(isBoss, waveIndex) {
+            const bossConfig = statConfig[waveIndex];
+            let emoji, hp, speed, size, reward, baseDamage;
+
+            if (isBoss) {
+                // 魔王設定：以該關主要能力為主，血量與攻擊力隨關卡暴增
+                emoji = bossConfig.emoji;
+                hp = 1000 + waveIndex * 800;  // 血量防禦極高
+                speed = 0.4 + (waveIndex * 0.05);
+                size = 30;
+                reward = 100 + waveIndex * 20;
+                baseDamage = 10 + waveIndex * 5; // 對基地傷害極高
+            } else {
+                // 小兵設定：隨機其他能力
+                let randomConfig = statConfig[Math.floor(Math.random() * statConfig.length)];
+                while(randomConfig.key === bossConfig.key) {
+                    randomConfig = statConfig[Math.floor(Math.random() * statConfig.length)];
+                }
+                emoji = randomConfig.emoji;
+                hp = 80 + waveIndex * 30;
+                speed = 1.0 + (Math.random() * 0.5) + (waveIndex * 0.05);
+                size = 14;
+                reward = 15;
+                baseDamage = 1;
+            }
             
             enemies.push({
                 x: pathPoints[0].x, y: pathPoints[0].y,
@@ -496,36 +608,22 @@
                 speed: speed, baseSpeed: speed,
                 size: size, reward: reward,
                 isBoss: isBoss, emoji: emoji,
+                baseDamage: baseDamage,
                 slowTimer: 0
             });
         }
 
         function handleEnemies() {
-            // 生成邏輯
-            if(!bossSpawned) {
-                if(frameCount % 100 === 0 && smallEnemyCount < 10) {
-                    spawnEnemy(false);
-                    smallEnemyCount++;
-                } else if(smallEnemyCount >= 10 && enemies.length === 0) {
-                    // 準備出 Boss
-                    document.getElementById('boss-warning').classList.remove('hidden');
-                    setTimeout(() => { spawnEnemy(true); }, 2000);
-                    bossSpawned = true;
-                }
-            }
-
             for(let i = enemies.length - 1; i >= 0; i--) {
                 let e = enemies[i];
                 
-                // 狀態效果處理 (水塔減速)
                 if(e.slowTimer > 0) {
                     e.slowTimer--;
-                    e.speed = e.baseSpeed * 0.5;
+                    e.speed = e.baseSpeed * 0.4; // 減速效果
                 } else {
                     e.speed = e.baseSpeed;
                 }
 
-                // 移動邏輯
                 let target = pathPoints[e.pathIndex + 1];
                 if(target) {
                     let dx = target.x - e.x;
@@ -541,8 +639,9 @@
                         e.y += (dy / dist) * e.speed;
                     }
                 } else {
-                    // 到達終點
-                    lives -= e.isBoss ? 10 : 1; // Boss進門直接死
+                    // 到達終點，扣除村莊血量
+                    lives -= e.baseDamage;
+                    playSound('hit'); // 爆炸音效
                     enemies.splice(i, 1);
                     continue;
                 }
@@ -555,15 +654,14 @@
                 
                 // 血條
                 ctx.fillStyle = 'red';
-                ctx.fillRect(e.x - e.size, e.y - e.size - 10, e.size * 2, 4);
+                ctx.fillRect(e.x - e.size, e.y - e.size - 10, e.size * 2, 5);
                 ctx.fillStyle = '#22c55e';
-                ctx.fillRect(e.x - e.size, e.y - e.size - 10, (e.size * 2) * (e.hp / e.maxHp), 4);
+                ctx.fillRect(e.x - e.size, e.y - e.size - 10, (e.size * 2) * (e.hp / e.maxHp), 5);
             }
         }
 
         function handleTowers() {
             towers.forEach(t => {
-                // 畫塔
                 ctx.fillStyle = '#fff';
                 ctx.beginPath();
                 ctx.arc(t.x, t.y, 18, 0, Math.PI * 2);
@@ -577,11 +675,9 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(t.emoji, t.x, t.y);
 
-                // 攻擊邏輯
                 if(t.cooldown > 0) t.cooldown--;
                 
                 if(t.cooldown <= 0) {
-                    // 尋找範圍內敵人
                     let target = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) <= t.range);
                     if(target) {
                         projectiles.push({
@@ -589,9 +685,10 @@
                             target: target,
                             type: t.type,
                             damage: t.damage,
-                            speed: 5,
+                            speed: 6,
                             color: t.color
                         });
+                        playSound('shoot'); // 開火音效
                         t.cooldown = t.fireRate;
                     }
                 }
@@ -611,10 +708,11 @@
                 let dist = Math.hypot(dx, dy);
 
                 if(dist < p.speed) {
-                    // 擊中
                     p.target.hp -= p.damage;
+                    playSound('hit'); // 命中音效
+                    
                     if(p.type === 'water') {
-                        p.target.slowTimer = 60; // 減速持續時間
+                        p.target.slowTimer = 90; 
                     }
                     
                     if(p.target.hp <= 0) {
@@ -627,7 +725,6 @@
                     p.x += (dx / dist) * p.speed;
                     p.y += (dy / dist) * p.speed;
                     
-                    // 畫子彈
                     ctx.fillStyle = p.color;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -638,10 +735,15 @@
 
         function updateUI() {
             document.getElementById('ui-money').innerText = money;
-            document.getElementById('ui-lives').innerText = lives;
+            document.getElementById('ui-lives').innerText = Math.max(0, lives);
+            
+            let displayWave = Math.min(10, currentWave + 1);
             if(bossSpawned) {
-                document.getElementById('ui-wave').innerText = 'BOSS 戰';
-                document.getElementById('ui-wave').className = "text-red-500 animate-pulse";
+                document.getElementById('ui-wave').innerHTML = `Boss戰<br><span class="text-sm">(${displayWave}/10)</span>`;
+                document.getElementById('ui-wave').className = "text-xl text-red-400 animate-pulse";
+            } else {
+                document.getElementById('ui-wave').innerText = `${displayWave}/10`;
+                document.getElementById('ui-wave').className = "text-2xl text-cyan-400";
             }
         }
 
@@ -650,44 +752,36 @@
            ========================================== */
         function endGame(isWin) {
             gameOver = true;
+            document.getElementById('boss-warning').classList.add('hidden');
             showScreen('result-screen');
             
             document.getElementById('result-player').innerText = `玩家：${currentPlayer.name} (${currentPlayer.levelStr})`;
             const titleEl = document.getElementById('result-title');
             
             if(isWin) {
-                titleEl.innerText = "🎉 防守成功！打敗 AI 主宰者！";
+                playSound('win');
+                titleEl.innerText = "🎉 傳說誕生！擊破全十關！";
                 titleEl.className = "text-3xl font-black text-green-600 mb-2";
             } else {
-                titleEl.innerText = "💥 防線崩潰...村莊被摧毀了";
+                playSound('lose');
+                titleEl.innerText = `💥 防線崩潰...止步於第 ${currentWave + 1} 關`;
                 titleEl.className = "text-3xl font-black text-red-600 mb-2";
             }
 
-            // 學習分析邏輯：找出最強與最弱科目
             let statsArray = Object.keys(currentPlayer.stats).map(key => ({
                 key: key,
                 val: currentPlayer.stats[key],
                 label: statConfig.find(c => c.key === key).label
             }));
             
-            statsArray.sort((a, b) => b.val - a.val); // 降序排列
+            statsArray.sort((a, b) => b.val - a.val);
             let strongest = statsArray[0];
             let weakest = statsArray[statsArray.length - 1];
 
-            let analysisText = `你的 **${strongest.label}** 能力非常突出（分數：${strongest.val}），在戰鬥中發揮了關鍵作用！\n`;
-            if(strongest.key === 'programming') analysisText += "（火塔造成了極高的爆發傷害）";
-            if(strongest.key === 'data') analysisText += "（水塔的廣域減速完美控場）";
-            if(strongest.key === 'project') analysisText += "（木塔的極快攻速壓制了敵人）";
-            
+            let analysisText = `你的 **${strongest.label}** 能力極為突出（高達 ${strongest.val} 分），這是你在十關極限考驗中最堅實的武器！\n`;
             document.getElementById('result-analysis').innerHTML = analysisText;
             
-            let suggestionText = `發現 **${weakest.label}** 數值偏低（分數：${weakest.val}）。\n👉 建議：`;
-            if(weakest.key === 'programming') suggestionText += "加強「Python迴圈與條件判斷」練習，提升火塔攻擊力！";
-            else if(weakest.key === 'data') suggestionText += "複習「試算表圖表製作」，增加水塔的作用範圍！";
-            else if(weakest.key === 'project') suggestionText += "多參與「專題實作與發表」，縮短木塔的攻擊冷卻時間！";
-            else if(weakest.key === 'system') suggestionText += "理解「電腦硬體與作業系統」，能增加村莊的初始血量。";
-            else if(weakest.key === 'logic') suggestionText += "多玩「運算思維解謎」，能獲得更多的初始防守資金！";
-            
+            let suggestionText = `在嚴苛的魔王戰中，發現你的 **${weakest.label}** 稍顯薄弱（${weakest.val} 分）。建議針對此科目進行特訓，能大幅提升下次防守的生存機率！`;
             document.getElementById('result-suggestion').innerText = suggestionText;
         }
 
@@ -697,7 +791,7 @@
         async function saveDataAndRestart() {
             const gameData = {
                 playerName: currentPlayer.name,
-                result: lives > 0 ? 'WIN' : 'LOSE',
+                result: lives > 0 ? 'WIN_10' : `LOSE_AT_WAVE_${currentWave + 1}`,
                 remainingLives: lives,
                 moneyEarned: money,
                 timestamp: new Date().toISOString()
@@ -710,23 +804,16 @@
             }
 
             try {
-                if (GAS_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
-                    // 呼叫 GAS 寫入數據 (POST 請求)
-                    // 注意：使用 text/plain 避免觸發 CORS 預檢請求，GAS 仍可解析 JSON
-                    await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(gameData),
-                        headers: {
-                            "Content-Type": "text/plain;charset=utf-8", 
-                        }
-                    });
-                    alert(`✅ 已將【${currentPlayer.name}】的戰績儲存至雲端！`);
-                } else {
-                    alert(`⚠️ (尚未設定 GAS URL)\n模擬儲存戰績：${gameData.result}`);
-                }
+                // 傳送給您的 GAS URL
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(gameData),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                });
+                alert(`✅ 戰績存檔成功！\n階級：${currentPlayer.levelStr}\n最終關卡：${currentWave + 1}`);
             } catch (error) {
                 console.error("儲存失敗:", error);
-                alert("❌ 儲存失敗，請檢查網路連線或 GAS 網址設定。");
+                alert("❌ 儲存失敗，請檢查網路連線。");
             }
             
             if (saveBtn) {
@@ -734,7 +821,6 @@
                 saveBtn.disabled = false;
             }
             
-            // 返回首頁
             document.getElementById('player-name').value = '';
             showScreen('login-screen');
         }
