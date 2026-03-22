@@ -201,7 +201,7 @@
             <span class="text-gray-400 text-xs ml-1">(+15/3秒)</span>
         </div>
         <div class="text-xl flex items-center gap-3 bg-gray-800 px-3 py-1 rounded-lg border border-gray-600">
-            <span>👑君主 Lv.<span id="ui-lord-level" class="text-amber-400">1</span> (❤️<span id="ui-lives" class="text-red-400">20</span>/<span id="ui-max-lives">20</span>)</span>
+            <span>👑君主(<span id="ui-lord-name" class="text-cyan-300">玩家</span>) Lv.<span id="ui-lord-level" class="text-amber-400">1</span> (❤️<span id="ui-lives" class="text-red-400">20</span>/<span id="ui-max-lives">20</span>)</span>
             <button onclick="upgradeLord()" class="btn bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-sm px-3 py-1 rounded-full shadow font-black border border-yellow-200 hover:from-yellow-300 hover:to-yellow-500">
                 升級 $<span id="ui-lord-cost">100</span>
             </button>
@@ -765,7 +765,16 @@ function startGame() {
 }
 
 function startWave() {
-    if (currentWave >= 10) { endGame(true); return; }
+    // 10關全數通過後，遊戲仍繼續直到敵方城堡HP歸零才算勝利
+    if (currentWave >= 10) {
+        // 顯示提示：10關通過，繼續攻打城堡
+        const warnEl = document.getElementById('boss-warning');
+        warnEl.innerHTML = `🏅 十關全破！猛攻敵方城堡取得最終勝利！`;
+        warnEl.classList.remove('hidden', 'border-red-600', 'text-red-600');
+        warnEl.classList.add('border-yellow-400', 'text-yellow-600');
+        setTimeout(() => warnEl.classList.add('hidden'), 4000);
+        return; // 不再繼續生成新波次，等城堡HP歸零
+    }
 
     currentMap   = MAPS[currentWave];
     path         = currentMap.path;
@@ -890,8 +899,8 @@ function gameLoop() {
     updateDeployButtons();
     updateCastleHPBar(); // 【二】更新城堡HP條
 
-    // 原始生命值為0的結束條件（保留）
-    if (lives <= 0) { endGame(false); return; }
+    // 勝敗條件：僅以城堡HP決定，lives不再觸發結束
+    // （playerCastleHP<=0 由 handleEnemies 觸發失敗，enemyCastleHP<=0 由 handlePlayerUnits 觸發勝利）
 
     gameLoopId = requestAnimationFrame(gameLoop);
 }
@@ -1037,9 +1046,11 @@ function handleEnemies() {
                 if (dist < spd) { e.x = target.x; e.y = target.y; e.pathIndex++; }
                 else { e.x += (dx / dist) * spd; e.y += (dy / dist) * spd; }
             } else {
-                // 【二】敵人到達玩家城堡：扣玩家城堡HP + 原始生命值邏輯
+                // 敵人突破防線抵達玩家城堡
+                // lives 僅作視覺顯示用，不作為失敗條件
                 lives -= e.baseDamage;
-                playerCastleHP -= e.isBoss ? 100 : 20; // Boss扣100，小兵扣20
+                // 扣玩家城堡HP（Boss扣100，小兵扣20）
+                playerCastleHP -= e.isBoss ? 100 : 20;
                 playerCastleHP = Math.max(0, playerCastleHP);
 
                 playSound('hit');
@@ -1047,7 +1058,7 @@ function handleEnemies() {
                 setTimeout(() => canvas.style.transform = "none", 50);
                 toRemove.push(e);
 
-                // 【二】玩家城堡HP歸零：遊戲失敗
+                // ★ 唯一失敗條件：玩家城堡HP歸零
                 if (playerCastleHP <= 0) { endGame(false); return; }
                 continue;
             }
@@ -1142,13 +1153,13 @@ function handlePlayerUnits() {
                 if (dist < n.speed) { n.x = target.x; n.y = target.y; n.pathIndex--; }
                 else { n.x += (dx / dist) * n.speed; n.y += (dy / dist) * n.speed; }
             } else {
-                // 【二】忍者到達敵方城堡（路徑起點）：扣敵方城堡HP
-                enemyCastleHP -= 50; // 每位忍者突破城牆扣50HP
+                // 忍者突入敵方城堡，造成傷害
+                enemyCastleHP -= 50; // 每位忍者衝入城牆扣50HP
                 enemyCastleHP = Math.max(0, enemyCastleHP);
                 spawnParticles(pathPoints[0].x, pathPoints[0].y, '#facc15', 10);
                 toRemove.push(n);
 
-                // 【二】敵方城堡HP歸零：遊戲勝利（提前）
+                // ★ 唯一勝利條件：敵方城堡HP歸零
                 if (enemyCastleHP <= 0) { endGame(true); return; }
                 continue;
             }
@@ -1228,6 +1239,9 @@ function updateUI() {
     document.getElementById('ui-max-lives').innerText = maxLives;
     document.getElementById('ui-lord-level').innerText = lordLevel;
     document.getElementById('ui-lord-cost').innerText = lordUpgradeCost;
+    // 顯示登入帳號於君主欄位
+    const lordNameEl = document.getElementById('ui-lord-name');
+    if (lordNameEl) lordNameEl.innerText = currentPlayer.name || '玩家';
 
     const upgBtn = document.querySelector('button[onclick="upgradeLord()"]');
     if (money < lordUpgradeCost) upgBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -1320,25 +1334,17 @@ function endGame(isWin) {
 
     document.getElementById('boss-warning').classList.add('hidden');
     showScreen('result-screen');
-    document.getElementById('result-player').innerText = `君主：${currentPlayer.name} (Lv.${lordLevel})`;
+    document.getElementById('result-player').innerText = `君主(${currentPlayer.name}) Lv.${lordLevel}`;
     const titleEl = document.getElementById('result-title');
     if (isWin) {
         playSound('boss');
-        // 判斷是十關通關還是攻破敵方城堡
-        if (enemyCastleHP <= 0) {
-            titleEl.innerText = "🏰 攻破敵方城堡！忍界稱霸！";
-        } else {
-            titleEl.innerText = "🏆 登峰造極！稱霸會考十關！";
-        }
+        // ★ 唯一勝利：敵方城堡HP歸零
+        titleEl.innerText = "🏰 攻破敵方城堡！忍界稱霸！";
         titleEl.className = "text-4xl font-black text-green-500 mb-2";
     } else {
         playSound('hit');
-        // 判斷是生命值歸零還是城堡被攻破
-        if (playerCastleHP <= 0) {
-            titleEl.innerText = `💥 我方城堡淪陷！止步於第 ${Math.min(currentWave + 1, 10)} 關`;
-        } else {
-            titleEl.innerText = `💥 城堡淪陷...止步於第 ${Math.min(currentWave + 1, 10)} 關`;
-        }
+        // ★ 唯一失敗：玩家城堡HP歸零
+        titleEl.innerText = `💥 我方城堡淪陷！止步於第 ${Math.min(currentWave + 1, 10)} 關`;
         titleEl.className = "text-4xl font-black text-red-500 mb-2";
     }
 
