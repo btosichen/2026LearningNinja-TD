@@ -3,731 +3,747 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>忍界學習守衛戰：Learning Ninja TD (能力覺醒版)</title>
+    <title>忍之國防衛戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f0fdf4;
-            overflow: hidden;
-            touch-action: none;
-        }
-        .screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            overflow-y: auto;
-        }
-        .screen.active {
-            display: flex;
-        }
-        #game-container {
-            position: relative;
-            display: inline-block; /* 讓升級面板能精確定位 */
-        }
-        canvas {
-            background-color: #dcfce7;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            border: 4px solid #166534;
-        }
-        .btn {
-            transition: all 0.2s;
-        }
-        .btn:hover {
-            transform: scale(1.05);
-        }
-        .btn:active {
-            transform: scale(0.95);
-        }
-        .tower-btn {
-            cursor: pointer;
-            border: 3px solid transparent;
-            min-width: 80px;
-        }
-        .tower-btn.selected {
-            border-color: #fbbf24;
-            background-color: #fef3c7;
-            transform: translateY(-5px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        /* 升級面板動畫 */
-        @keyframes popUp {
-            0% { transform: translate(-50%, 10px) scale(0.8); opacity: 0; }
-            100% { transform: translate(-50%, -100%) scale(1); opacity: 1; }
-        }
-        #upgrade-panel {
-            animation: popUp 0.2s ease-out forwards;
-        }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        body { margin: 0; padding: 0; background-color: #111827; color: white; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #game-wrapper { display: flex; justify-content: center; align-items: flex-start; padding: 20px; gap: 20px; min-height: 100vh; }
+        canvas { background-color: #22c55e; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); cursor: crosshair; }
+        .tower-btn { transition: all 0.2s; }
+        .tower-btn.selected { border-color: #fbbf24; background-color: rgba(251, 191, 36, 0.2); transform: scale(1.05); }
+        .tower-btn:hover:not(.selected) { background-color: rgba(255, 255, 255, 0.1); }
+        /* 背景色庫 (對應10關) */
+        .bg-level-1 { background-color: #4ade80; } /* 草原 */
+        .bg-level-2 { background-color: #fde047; } /* 沙漠 */
+        .bg-level-3 { background-color: #9ca3af; } /* 石陣 */
+        .bg-level-4 { background-color: #f87171; } /* 火山 */
+        .bg-level-5 { background-color: #c084fc; } /* 毒沼 */
+        .bg-level-6 { background-color: #60a5fa; } /* 冰原 */
+        .bg-level-7 { background-color: #84cc16; } /* 密林 */
+        .bg-level-8 { background-color: #b91c1c; } /* 血谷 */
+        .bg-level-9 { background-color: #1e3a8a; } /* 深淵 */
+        .bg-level-10 { background-color: #0f172a; } /* 魔王城 */
     </style>
 </head>
 <body>
 
-    <!-- 1️⃣ 登入畫面 -->
-    <div id="login-screen" class="screen active flex-col items-center justify-center bg-gradient-to-br from-green-400 to-blue-500">
-        <div class="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-md w-full mx-4">
-            <h1 class="text-4xl font-black text-green-700 mb-2">🥷 忍界學習守衛戰</h1>
-            <p class="text-gray-500 mb-8 font-bold">能力覺醒 - 科目大戰</p>
-            
-            <div class="mb-6">
-                <input type="text" id="player-name" placeholder="請輸入忍者姓名 (如90401)" 
-                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500 text-lg text-center font-bold">
-            </div>
-            
-            <button id="login-btn" onclick="login()" class="btn w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-xl shadow-lg hover:bg-green-500">
-                進入忍界 (讀取數據)
-            </button>
-            <p class="mt-4 text-sm text-gray-400">帳號請輸入班級座號，如90401</p>
+<div id="game-wrapper">
+    <!-- 遊戲畫布 -->
+    <div class="relative">
+        <canvas id="gameCanvas" width="800" height="600" class="bg-level-1"></canvas>
+        <div id="overlay" class="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center rounded-lg z-10 hidden">
+            <h1 id="overlay-title" class="text-5xl font-bold text-yellow-400 mb-4">過關！</h1>
+            <p id="overlay-desc" class="text-xl mb-6">準備迎接下一波會考魔王</p>
+            <button id="btn-next-level" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded text-xl font-bold transition">進入下一關</button>
+            <button id="btn-restart" class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded text-xl font-bold transition hidden">重新開始</button>
         </div>
     </div>
 
-    <!-- 2️⃣ 數據面板 -->
-    <div id="dashboard-screen" class="screen flex-col items-center justify-start py-10 bg-gray-50">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-4xl mx-4 flex flex-col items-center">
-            <h2 class="text-3xl font-black text-gray-800 mb-2">📊 忍者全方位能力鑑定</h2>
-            <p id="ninja-title" class="text-xl text-green-600 font-bold mb-4">Lv.1 入門忍者 - 玩家</p>
-            
-            <div class="w-full max-w-lg mb-4 relative">
-                <canvas id="radar-chart"></canvas>
-            </div>
-            
-            <!-- 10科能力網格 -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 w-full text-center text-sm">
-                <div class="bg-red-50 p-2 rounded-lg border border-red-200"><p class="text-red-600 font-bold">🔥程式</p><p id="stat-programming" class="text-xl font-black">0</p></div>
-                <div class="bg-blue-50 p-2 rounded-lg border border-blue-200"><p class="text-blue-600 font-bold">💧資料</p><p id="stat-data" class="text-xl font-black">0</p></div>
-                <div class="bg-green-50 p-2 rounded-lg border border-green-200"><p class="text-green-600 font-bold">🌳專題</p><p id="stat-project" class="text-xl font-black">0</p></div>
-                <div class="bg-yellow-50 p-2 rounded-lg border border-yellow-200"><p class="text-yellow-600 font-bold">⚙️系統</p><p id="stat-system" class="text-xl font-black">0</p></div>
-                <div class="bg-purple-50 p-2 rounded-lg border border-purple-200"><p class="text-purple-600 font-bold">🧩解決</p><p id="stat-logic" class="text-xl font-black">0</p></div>
-                
-                <div class="bg-gray-100 p-2 rounded-lg border border-gray-300"><p class="text-gray-600 font-bold">📜國文</p><p id="stat-chinese" class="text-xl font-black">0</p></div>
-                <div class="bg-cyan-50 p-2 rounded-lg border border-cyan-200"><p class="text-cyan-600 font-bold">🔤英文</p><p id="stat-english" class="text-xl font-black">0</p></div>
-                <div class="bg-orange-50 p-2 rounded-lg border border-orange-200"><p class="text-orange-600 font-bold">📐數學</p><p id="stat-math" class="text-xl font-black">0</p></div>
-                <div class="bg-amber-50 p-2 rounded-lg border border-amber-200"><p class="text-amber-600 font-bold">🌍社會</p><p id="stat-social" class="text-xl font-black">0</p></div>
-                <div class="bg-teal-50 p-2 rounded-lg border border-teal-200"><p class="text-teal-600 font-bold">🔬自然</p><p id="stat-science" class="text-xl font-black">0</p></div>
-            </div>
+    <!-- UI 面板 -->
+    <div class="w-80 bg-gray-800 rounded-lg shadow-xl p-5 flex flex-col gap-5 border border-gray-700">
+        <div class="text-center pb-4 border-b border-gray-600">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-red-500">忍之國防衛戰</h1>
+            <p class="text-gray-400 text-sm mt-1">對抗會考大魔王</p>
+        </div>
 
-            <button onclick="startGame()" class="btn bg-indigo-600 text-white font-bold py-3 px-10 rounded-full text-xl shadow-lg hover:bg-indigo-500 animate-pulse">
-                ⚔️ 開始十關塔防戰
+        <!-- 君主等級與狀態 -->
+        <div class="bg-gray-900 p-4 rounded border border-gray-700">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-lg font-bold text-yellow-400">君主等級: <span id="ui-lord-level">1</span></span>
+                <span class="text-yellow-300 font-bold">金幣: <span id="ui-gold">300</span></span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4 mb-2 relative overflow-hidden">
+                <div id="ui-hp-bar" class="bg-red-500 h-4 rounded-full transition-all duration-300" style="width: 100%;"></div>
+            </div>
+            <div class="text-right text-sm text-gray-300 mb-3">君主護衛力: <span id="ui-hp">20</span> / <span id="ui-max-hp">20</span></div>
+            
+            <button id="btn-upgrade-lord" class="w-full py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black font-bold rounded shadow transition">
+                升級君主 (花費: <span id="ui-upgrade-cost">100</span>)
             </button>
         </div>
-    </div>
 
-    <!-- 3️⃣ 遊戲畫面 -->
-    <div id="game-screen" class="screen flex-col items-center justify-center bg-gray-900">
-        <div class="w-full max-w-4xl flex justify-between items-center px-4 py-2 text-white font-bold mb-2">
-            <div class="text-xl">💰 資金: <span id="ui-money" class="text-yellow-400">200</span></div>
-            <div class="text-xl">❤️ 村莊血量: <span id="ui-lives" class="text-red-400">20</span></div>
-            <div class="text-xl text-center">👾 關卡進度<br><span id="ui-wave" class="text-2xl text-cyan-400">1/10</span></div>
+        <!-- 關卡資訊 -->
+        <div class="flex justify-between items-center text-lg font-bold">
+            <span class="text-blue-400">當前關卡: <span id="ui-level">1</span> / 10</span>
+            <span class="text-red-400">剩餘魔王: <span id="ui-enemies">0</span></span>
         </div>
 
-        <div id="game-container">
-            <!-- 畫布 -->
-            <canvas id="game-canvas" width="800" height="500"></canvas>
-            
-            <!-- 浮動升級面板 (隱藏) -->
-            <div id="upgrade-panel" class="hidden absolute bg-white p-3 rounded-xl shadow-2xl border-2 border-indigo-400 z-40 w-48 pointer-events-auto">
-                <div id="upg-title" class="text-sm font-black text-gray-800 border-b pb-1 mb-2 text-center">程式設計 💻</div>
-                <div class="flex justify-between text-xs text-gray-600 mb-1"><span>攻擊力:</span> <span id="upg-dmg" class="font-bold text-red-500">20 ➔ 40</span></div>
-                <div class="flex justify-between text-xs text-gray-600 mb-1"><span>攻擊範圍:</span> <span id="upg-range" class="font-bold text-blue-500">100 ➔ 110</span></div>
-                <div class="flex justify-between text-xs text-gray-600 mb-3"><span>新稱號:</span> <span id="upg-rank" class="font-bold text-purple-600">進階🚀</span></div>
-                
-                <button id="btn-do-upgrade" onclick="doUpgrade()" class="w-full bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-bold py-1.5 rounded shadow">
-                    升級 ($<span id="upg-cost">70</span>)
-                </button>
-                <button onclick="hideUpgradePanel()" class="w-full mt-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs py-1 rounded">取消</button>
-            </div>
-
-            <!-- 魔王警告 -->
-            <div id="boss-warning" class="hidden absolute top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl font-black text-red-600 animate-bounce drop-shadow-2xl bg-white/90 px-6 py-4 rounded-3xl border-4 border-red-500 whitespace-nowrap z-50 pointer-events-none">
-                ⚠️ 國文 大魔王 來襲！ ⚠️
-            </div>
-            
-            <!-- 塔選擇工具列 (5項技能) -->
-            <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-white/95 px-4 py-2 rounded-2xl shadow-lg flex gap-2 border-2 border-gray-200 overflow-x-auto max-w-full">
-                <div onclick="selectTower('programming')" id="btn-tower-programming" class="tower-btn flex flex-col items-center p-2 rounded-xl selected">
-                    <div class="text-2xl">💻</div>
-                    <div class="text-[10px] font-bold text-red-600 mt-1">程式(均衡)</div>
-                    <div class="text-xs font-bold text-gray-500">$50</div>
-                </div>
-                <div onclick="selectTower('data')" id="btn-tower-data" class="tower-btn flex flex-col items-center p-2 rounded-xl">
-                    <div class="text-2xl">📊</div>
-                    <div class="text-[10px] font-bold text-blue-600 mt-1">資料(減速)</div>
-                    <div class="text-xs font-bold text-gray-500">$40</div>
-                </div>
-                <div onclick="selectTower('project')" id="btn-tower-project" class="tower-btn flex flex-col items-center p-2 rounded-xl">
-                    <div class="text-2xl">💡</div>
-                    <div class="text-[10px] font-bold text-green-600 mt-1">專題(連射)</div>
-                    <div class="text-xs font-bold text-gray-500">$60</div>
-                </div>
-                <div onclick="selectTower('system')" id="btn-tower-system" class="tower-btn flex flex-col items-center p-2 rounded-xl">
-                    <div class="text-2xl">⚙️</div>
-                    <div class="text-[10px] font-bold text-yellow-600 mt-1">系統(長程)</div>
-                    <div class="text-xs font-bold text-gray-500">$80</div>
-                </div>
-                <div onclick="selectTower('logic')" id="btn-tower-logic" class="tower-btn flex flex-col items-center p-2 rounded-xl">
-                    <div class="text-2xl">🧩</div>
-                    <div class="text-[10px] font-bold text-purple-600 mt-1">解決(高傷)</div>
-                    <div class="text-xs font-bold text-gray-500">$70</div>
-                </div>
+        <!-- 忍者兵種選擇 -->
+        <div class="flex-1">
+            <h3 class="text-gray-400 font-bold mb-3">招募忍者 (點擊選擇，再點擊地圖放置)</h3>
+            <div class="grid grid-cols-1 gap-2" id="tower-container">
+                <!-- 動態生成按鈕 -->
             </div>
         </div>
-    </div>
 
-    <!-- 4️⃣ 結算畫面 -->
-    <div id="result-screen" class="screen flex-col items-center justify-center bg-gray-900 bg-opacity-95">
-        <div class="bg-white p-10 rounded-3xl shadow-2xl max-w-lg w-full mx-4 text-center border-t-8 border-indigo-500">
-            <h1 id="result-title" class="text-4xl font-black text-indigo-600 mb-2">🎉 防守成功！</h1>
-            <p id="result-player" class="text-xl font-bold text-gray-600 mb-6">玩家：小明</p>
-            
-            <button id="save-btn" onclick="saveDataAndRestart()" class="btn w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-xl shadow-lg hover:bg-green-400">
-                儲存戰績並返回
-            </button>
-            <p class="mt-4 text-xs text-gray-400 font-mono">✅ 準備連線 Google Apps Script 雲端伺服器</p>
-        </div>
+        <!-- 控制按鈕 -->
+        <button id="btn-start-wave" class="w-full py-3 bg-green-600 hover:bg-green-500 rounded text-xl font-bold shadow-lg transition animate-pulse">
+            召喚敵軍 (開始戰鬥)
+        </button>
     </div>
+</div>
 
-    <script>
-        /* ==========================================
-           0. 音效系統
-           ========================================== */
-        let audioCtx;
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+<script>
+/** 遊戲設定常數 **/
+const TOWER_TYPES = {
+    prog: { id: 'prog', name: '程式設計忍者', cost: 50, color: '#ef4444', range: 120, damage: 10, cooldown: 15, desc: '攻速極快，基礎傷害' },
+    data: { id: 'data', name: '資料處理忍者', cost: 80, color: '#3b82f6', range: 180, damage: 45, cooldown: 60, desc: '射速慢，單發傷害極高' },
+    proj: { id: 'proj', name: '專題製作忍者', cost: 120, color: '#22c55e', range: 350, damage: 80, cooldown: 90, desc: '超遠程狙擊，威力驚人' },
+    sys:  { id: 'sys', name: '系統理解忍者', cost: 100, color: '#eab308', range: 150, damage: 5, cooldown: 30, desc: '傷害低，但能牽制減速敵人', effect: 'slow' },
+    prob: { id: 'prob', name: '問題解決忍者', cost: 150, color: '#a855f7', range: 90, damage: 30, cooldown: 10, desc: '極近距離，超高爆發輸出' }
+};
+
+const ENEMY_TYPES = [
+    { name: '國文魔王', color: '#fca5a5', hpMult: 1.0, spdMult: 1.0, damage: 1 },
+    { name: '英文魔王', color: '#93c5fd', hpMult: 0.8, spdMult: 1.5, damage: 1 },
+    { name: '數學魔王', color: '#86efac', hpMult: 2.5, spdMult: 0.7, damage: 2 }, // 防禦最高，血最多
+    { name: '社會魔王', color: '#fde047', hpMult: 1.5, spdMult: 0.9, damage: 1 },
+    { name: '自然魔王', color: '#d8b4fe', hpMult: 1.2, spdMult: 1.2, damage: 2 }
+];
+
+// 10種不同的地圖路徑 (800x600)
+const PATHS = [
+    // 1. S型
+    [{x: -50, y: 150}, {x: 650, y: 150}, {x: 650, y: 450}, {x: 150, y: 450}, {x: 150, y: 650}],
+    // 2. U型折返
+    [{x: 100, y: -50}, {x: 100, y: 500}, {x: 700, y: 500}, {x: 700, y: 100}, {x: 300, y: 100}, {x: 300, y: -50}],
+    // 3. Z型閃電
+    [{x: -50, y: 100}, {x: 700, y: 100}, {x: 100, y: 500}, {x: 850, y: 500}],
+    // 4. 雙迴圈
+    [{x: -50, y: 300}, {x: 200, y: 300}, {x: 200, y: 100}, {x: 400, y: 100}, {x: 400, y: 500}, {x: 600, y: 500}, {x: 600, y: 300}, {x: 850, y: 300}],
+    // 5. 迷宮階梯
+    [{x: 100, y: 650}, {x: 100, y: 450}, {x: 300, y: 450}, {x: 300, y: 250}, {x: 500, y: 250}, {x: 500, y: 50}, {x: 700, y: 50}, {x: 700, y: 650}],
+    // 6. 螺旋向內
+    [{x: -50, y: 50}, {x: 750, y: 50}, {x: 750, y: 550}, {x: 50, y: 550}, {x: 50, y: 150}, {x: 600, y: 150}, {x: 600, y: 400}, {x: 200, y: 400}, {x: 200, y: 250}, {x: 400, y: 250}],
+    // 7. W型
+    [{x: -50, y: 100}, {x: 200, y: 500}, {x: 400, y: 100}, {x: 600, y: 500}, {x: 850, y: 100}],
+    // 8. 交叉穿梭
+    [{x: 400, y: -50}, {x: 400, y: 250}, {x: 100, y: 250}, {x: 100, y: 450}, {x: 700, y: 450}, {x: 700, y: 100}, {x: 850, y: 100}],
+    // 9. 蛇行
+    [{x: 50, y: 650}, {x: 50, y: 100}, {x: 200, y: 100}, {x: 200, y: 500}, {x: 350, y: 500}, {x: 350, y: 100}, {x: 500, y: 100}, {x: 500, y: 500}, {x: 650, y: 500}, {x: 650, y: 100}, {x: 850, y: 100}],
+    // 10. 魔王終極試煉
+    [{x: -50, y: 300}, {x: 200, y: 300}, {x: 200, y: 100}, {x: 600, y: 100}, {x: 600, y: 500}, {x: 100, y: 500}, {x: 100, y: 400}, {x: 850, y: 400}]
+];
+
+/** 遊戲全域變數 **/
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let animationId;
+let isPlaying = false;
+let waveActive = false;
+let frameCount = 0;
+
+let gold = 300;
+let level = 1;
+let lordLevel = 1;
+let lordMaxHp = 20;
+let lordHp = 20;
+
+let towers = [];
+let enemies = [];
+let particles = [];
+let floatingTexts = [];
+let selectedTowerType = null;
+
+let enemySpawnTimer = 0;
+let enemiesToSpawn = 0;
+let currentPath = [];
+
+/** DOM 元素 **/
+const uiGold = document.getElementById('ui-gold');
+const uiLevel = document.getElementById('ui-level');
+const uiEnemies = document.getElementById('ui-enemies');
+const uiLordLevel = document.getElementById('ui-lord-level');
+const uiHp = document.getElementById('ui-hp');
+const uiMaxHp = document.getElementById('ui-max-hp');
+const uiHpBar = document.getElementById('ui-hp-bar');
+const uiUpgradeCost = document.getElementById('ui-upgrade-cost');
+const btnUpgrade = document.getElementById('btn-upgrade-lord');
+const btnStartWave = document.getElementById('btn-start-wave');
+const overlay = document.getElementById('overlay');
+const btnNextLevel = document.getElementById('btn-next-level');
+const btnRestart = document.getElementById('btn-restart');
+const towerContainer = document.getElementById('tower-container');
+
+/** 輔助數學函數 **/
+function getDistance(p1, p2) {
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+
+function distToSegmentSquared(p, v, w) {
+    let l2 = getDistance(v, w) ** 2;
+    if (l2 === 0) return getDistance(p, v) ** 2;
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return getDistance(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) }) ** 2;
+}
+
+/** 類別定義 **/
+class Enemy {
+    constructor(path, levelScale) {
+        this.path = path;
+        this.waypointIndex = 0;
+        this.x = path[0].x;
+        this.y = path[0].y;
+        
+        // 隨機決定魔王類型
+        const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+        this.name = type.name;
+        this.color = type.color;
+        
+        // 屬性隨關卡成長
+        const baseHp = 40 + (levelScale * 25);
+        this.maxHp = baseHp * type.hpMult;
+        this.hp = this.maxHp;
+        this.speed = (1.2 + (levelScale * 0.1)) * type.spdMult;
+        this.baseSpeed = this.speed;
+        this.damage = type.damage;
+        
+        this.radius = 16;
+        this.reward = 10 + Math.floor(levelScale * 2);
+        
+        this.slowTimer = 0;
+    }
+
+    update() {
+        // 減速效果處理
+        if (this.slowTimer > 0) {
+            this.slowTimer--;
+            this.speed = this.baseSpeed * 0.5;
+        } else {
+            this.speed = this.baseSpeed;
         }
 
-        function playSound(type) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            
-            if (type === 'shoot') {
-                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
-                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'hit') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
-                gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-            } else if (type === 'boss') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(300, now); osc.frequency.setValueAtTime(600, now + 0.2); osc.frequency.setValueAtTime(300, now + 0.4);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.8);
-                osc.start(now); osc.stop(now + 0.8);
-            } else if (type === 'upgrade') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.3);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-                osc.start(now); osc.stop(now + 0.3);
+        // 移動邏輯
+        const target = this.path[this.waypointIndex + 1];
+        if (!target) return; // 已經到終點
+
+        const dist = getDistance(this, target);
+        if (dist <= this.speed) {
+            this.x = target.x;
+            this.y = target.y;
+            this.waypointIndex++;
+        } else {
+            const angle = Math.atan2(target.y - this.y, target.x - this.x);
+            this.x += Math.cos(angle) * this.speed;
+            this.y += Math.sin(angle) * this.speed;
+        }
+    }
+
+    draw() {
+        // 畫魔王身體
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 畫血條
+        const hpPercent = this.hp / this.maxHp;
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(this.x - 15, this.y - 25, 30, 4);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(this.x - 15, this.y - 25, 30 * hpPercent, 4);
+
+        // 畫科目文字
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.name[0], this.x, this.y);
+    }
+}
+
+class Tower {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.radius = 18;
+        this.cooldownTimer = 0;
+        this.angle = 0;
+    }
+
+    update() {
+        if (this.cooldownTimer > 0) this.cooldownTimer--;
+
+        // 尋找目標
+        let target = null;
+        let minTargetDist = Infinity;
+
+        for (let enemy of enemies) {
+            const dist = getDistance(this, enemy);
+            if (dist <= this.type.range) {
+                // 優先打走得最遠的 (waypointIndex 最大，或同waypoint距離終點最近)
+                // 為簡單化，這裡打最接近塔的
+                if (dist < minTargetDist) {
+                    minTargetDist = dist;
+                    target = enemy;
+                }
             }
         }
 
-        /* ==========================================
-           1. 塔與敵人資料庫 (全新設計)
-           ========================================== */
-        // 5大玩家技能塔
-        const TOWER_TYPES = {
-            programming: { name: '程式設計', emoji: '💻', color: '#ef4444', 
-                levels: [
-                    { rank: '新手🐣', dmg: 20, range: 100, rate: 50, cost: 50, upCost: 60 },
-                    { rank: '熟練🚀', dmg: 45, range: 110, rate: 45, upCost: 120 },
-                    { rank: '駭客👑', dmg: 100, range: 120, rate: 40, upCost: null }
-                ]},
-            data: { name: '資料處理', emoji: '📊', color: '#3b82f6', 
-                levels: [
-                    { rank: '收集🔍', dmg: 5, range: 90, rate: 40, cost: 40, upCost: 50, slow: 0.6 },
-                    { rank: '分析📉', dmg: 12, range: 105, rate: 35, upCost: 90, slow: 0.4 },
-                    { rank: '大數據🌐', dmg: 25, range: 120, rate: 30, upCost: null, slow: 0.2 }
-                ]},
-            project: { name: '專題創作', emoji: '💡', color: '#22c55e', 
-                levels: [
-                    { rank: '草案📝', dmg: 8, range: 110, rate: 20, cost: 60, upCost: 75 },
-                    { rank: '實作🛠️', dmg: 18, range: 120, rate: 15, upCost: 110 },
-                    { rank: '金獎🏆', dmg: 40, range: 130, rate: 10, upCost: null }
-                ]},
-            system: { name: '系統理解', emoji: '⚙️', color: '#eab308', 
-                levels: [
-                    { rank: '架構🧱', dmg: 60, range: 150, rate: 90, cost: 80, upCost: 100 },
-                    { rank: '整合🔗', dmg: 130, range: 170, rate: 85, upCost: 160 },
-                    { rank: '架構師🏛️', dmg: 300, range: 200, rate: 80, upCost: null }
-                ]},
-            logic: { name: '問題解決', emoji: '🧩', color: '#a855f7', 
-                levels: [
-                    { rank: '除錯🐛', dmg: 30, range: 100, rate: 50, cost: 70, upCost: 80 },
-                    { rank: '最佳化✨', dmg: 70, range: 100, rate: 45, upCost: 140 },
-                    { rank: '大師🧙‍♂️', dmg: 160, range: 110, rate: 40, upCost: null }
-                ]}
-        };
-
-        // 各種校園小兵
-        const MINIONS = [
-            { name: '各科作業', emoji: '📝', hpMult: 1.0, spdMult: 1.2, rwd: 10 },
-            { name: '聯絡簿', emoji: '📔', hpMult: 0.6, spdMult: 1.6, rwd: 8 },
-            { name: '打掃', emoji: '🧹', hpMult: 1.5, spdMult: 0.8, rwd: 15 },
-            { name: '體育', emoji: '🏀', hpMult: 0.8, spdMult: 2.0, rwd: 12 },
-            { name: '美術', emoji: '🎨', hpMult: 1.2, spdMult: 1.0, rwd: 14 },
-            { name: '音樂', emoji: '🎵', hpMult: 0.9, spdMult: 1.1, rwd: 11 },
-            { name: '童軍', emoji: '🏕️', hpMult: 2.5, spdMult: 0.7, rwd: 20 },
-            { name: '表藝', emoji: '🎭', hpMult: 1.0, spdMult: 1.4, rwd: 15 }
-        ];
-
-        // 5大學科魔王 (循環出現)
-        const BOSS_SUBJECTS = [
-            { key: 'chinese', label: '國文', emoji: '📜' },
-            { key: 'english', label: '英文', emoji: '🔤' },
-            { key: 'math', label: '數學', emoji: '📐' },
-            { key: 'social', label: '社會', emoji: '🌍' },
-            { key: 'science', label: '自然', emoji: '🔬' }
-        ];
-
-        const mockDatabase = {
-            "小明": { programming: 85, data: 60, project: 90, system: 75, logic: 80, chinese: 70, english: 65, math: 88, social: 72, science: 81 },
-            "小華": { programming: 65, data: 95, project: 70, system: 85, logic: 90, chinese: 88, english: 92, math: 60, social: 85, science: 75 },
-            "小美": { programming: 95, data: 90, project: 85, system: 90, logic: 95, chinese: 92, english: 95, math: 98, social: 90, science: 96 }
-        };
-
-        const statConfig = [
-            { key: 'programming', label: '程式' }, { key: 'data', label: '資料' },
-            { key: 'project', label: '專題' }, { key: 'system', label: '系統' },
-            { key: 'logic', label: '解決' }, { key: 'chinese', label: '國文' },
-            { key: 'english', label: '英文' }, { key: 'math', label: '數學' },
-            { key: 'social', label: '社會' }, { key: 'science', label: '自然' }
-        ];
-
-        let currentPlayer = { name: "", stats: {}, levelStr: "" };
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbz9vOO1WaJLvXMbZEs55WMIqeRuVVuijHuTESNG642ppCq8m-sGBHhETdbvMo5T7AYTBw/exec";
-
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
-        async function login() {
-            initAudio();
-            const nameInput = document.getElementById('player-name').value.trim();
-            if (!nameInput) { alert("請輸入忍者姓名！"); return; }
-            currentPlayer.name = nameInput;
-            
-            const loginBtn = document.getElementById('login-btn');
-            loginBtn.innerText = "連線讀取成績中..."; loginBtn.disabled = true;
-
-            try {
-                const response = await fetch(`${GAS_URL}?name=${encodeURIComponent(nameInput)}`);
-                const result = await response.json();
-                if (result.success && result.data) {
-                    currentPlayer.stats = result.data;
-                    statConfig.forEach(s => { if(currentPlayer.stats[s.key] === undefined) currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60; });
-                } else { generateRandomStats(nameInput); }
-            } catch (error) { generateRandomStats(nameInput); }
-
-            loginBtn.innerText = "進入忍界 (讀取數據)"; loginBtn.disabled = false;
-            calculateLevel(); updateDashboard(); showScreen('dashboard-screen');
-        }
-
-        function generateRandomStats(name) {
-            if (mockDatabase[name]) { currentPlayer.stats = mockDatabase[name]; } 
-            else { currentPlayer.stats = {}; statConfig.forEach(s => { currentPlayer.stats[s.key] = Math.floor(Math.random() * 35) + 60; }); }
-        }
-
-        function calculateLevel() {
-            const stats = Object.values(currentPlayer.stats);
-            const avg = stats.reduce((a, b) => a + b) / stats.length;
-            let title = avg < 60 ? "🌱 入門忍者" : avg < 70 ? "⚔️ 下忍" : avg < 80 ? "🌀 中忍" : avg < 85 ? "🔥 上忍" : avg < 89 ? "⚡ 特忍" : avg < 92 ? "👑 超忍" : avg < 95 ? "🦅 暗部隊長" : avg < 97 ? "🏛️ 忍村長老" : avg < 99 ? "🌟 影級尊者" : "🌌 六道仙人";
-            currentPlayer.levelStr = `Lv.${Math.floor(avg)} ${title}`;
-        }
-
-        let radarChartInstance = null;
-        function updateDashboard() {
-            document.getElementById('ninja-title').innerText = `${currentPlayer.levelStr} - ${currentPlayer.name}`;
-            statConfig.forEach(s => { const el = document.getElementById(`stat-${s.key}`); if(el) el.innerText = currentPlayer.stats[s.key]; });
-            const ctx = document.getElementById('radar-chart').getContext('2d');
-            const dataValues = statConfig.map(s => currentPlayer.stats[s.key]);
-            
-            if (radarChartInstance) radarChartInstance.destroy();
-            radarChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: statConfig.map(s => s.label),
-                    datasets: [{ label: '能力鑑定', data: dataValues, backgroundColor: 'rgba(99, 102, 241, 0.2)', borderColor: 'rgba(79, 70, 229, 1)', pointBackgroundColor: 'rgba(67, 56, 202, 1)', borderWidth: 2 }]
-                },
-                options: { scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 }, pointLabels: { font: { size: 12, weight: 'bold' } } } }, plugins: { legend: { display: false } } }
-            });
-        }
-
-        /* ==========================================
-           2. 核心遊戲邏輯與升級系統
-           ========================================== */
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        const GRID_SIZE = 50;
-        
-        let gameLoopId, money = 200, lives = 20, selectedTowerType = 'programming', selectedBuiltTower = null;
-        let towers = [], enemies = [], projectiles = [];
-        
-        const path = [{x: 0, y: 3}, {x: 4, y: 3}, {x: 4, y: 7}, {x: 10, y: 7}, {x: 10, y: 2}, {x: 15, y: 2}];
-        const pathPoints = path.map(p => ({ x: p.x * GRID_SIZE + 25, y: p.y * GRID_SIZE + 25 }));
-        let currentWave = 0, waveActive = false, smallEnemySpawned = 0, bossSpawned = false, frameCount = 0, gameOver = false;
-
-        function startGame() {
-            showScreen('game-screen');
-            money = 200 + Math.floor(currentPlayer.stats.logic / 2); 
-            lives = 20 + Math.floor(currentPlayer.stats.system / 10); 
-            towers = []; enemies = []; projectiles = []; currentWave = 0; gameOver = false;
-            hideUpgradePanel(); document.getElementById('boss-warning').classList.add('hidden');
-            if(gameLoopId) cancelAnimationFrame(gameLoopId);
-            startWave(); gameLoop();
-        }
-
-        function startWave() {
-            if (currentWave >= 10) { endGame(true); return; }
-            waveActive = true; smallEnemySpawned = 0; bossSpawned = false; frameCount = 0; updateUI();
-        }
-
-        function selectTower(type) {
-            selectedTowerType = type;
-            document.querySelectorAll('.tower-btn').forEach(btn => btn.classList.remove('selected'));
-            document.getElementById('btn-tower-' + type).classList.add('selected');
-            hideUpgradePanel();
-        }
-
-        // 升級面板邏輯
-        function showUpgradePanel(tower) {
-            selectedBuiltTower = tower;
-            const panel = document.getElementById('upgrade-panel');
-            const def = TOWER_TYPES[tower.type];
-            const lvlData = def.levels[tower.level];
-            
-            if (!lvlData.upCost) {
-                // 已達最高等
-                document.getElementById('upg-title').innerText = `${def.name} ${def.emoji} (Max)`;
-                document.getElementById('upg-dmg').innerText = lvlData.dmg;
-                document.getElementById('upg-range').innerText = lvlData.range;
-                document.getElementById('upg-rank').innerText = `${lvlData.rank} (最高級)`;
-                document.getElementById('btn-do-upgrade').style.display = 'none';
-            } else {
-                const nextData = def.levels[tower.level + 1];
-                document.getElementById('upg-title').innerText = `${def.name} ${def.emoji} (Lv.${tower.level + 1})`;
-                document.getElementById('upg-dmg').innerText = `${lvlData.dmg} ➔ ${nextData.dmg}`;
-                document.getElementById('upg-range').innerText = `${lvlData.range} ➔ ${nextData.range}`;
-                document.getElementById('upg-rank').innerText = nextData.rank;
-                document.getElementById('upg-cost').innerText = nextData.upCost;
-                document.getElementById('btn-do-upgrade').style.display = 'block';
+        if (target) {
+            this.angle = Math.atan2(target.y - this.y, target.x - this.x);
+            if (this.cooldownTimer <= 0) {
+                this.shoot(target);
+                this.cooldownTimer = this.type.cooldown;
             }
-            
-            // 由於外層 container 有 relative，這裡直接算相對座標
-            panel.style.left = `${tower.x}px`;
-            panel.style.top = `${tower.y - 30}px`;
-            panel.classList.remove('hidden');
+        }
+    }
+
+    shoot(target) {
+        particles.push(new Projectile(this.x, this.y, target, this.type));
+    }
+
+    draw() {
+        // 塔底座
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius + 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 塔身
+        ctx.fillStyle = this.type.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 砲管
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, -4, this.radius + 10, 8);
+        ctx.restore();
+
+        // 忍者標誌(簡單示意)
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("忍", this.x, this.y);
+    }
+}
+
+class Projectile {
+    constructor(x, y, target, towerType) {
+        this.x = x;
+        this.y = y;
+        this.target = target;
+        this.type = towerType;
+        this.speed = 8;
+        this.active = true;
+    }
+
+    update() {
+        if (!this.target || this.target.hp <= 0) {
+            this.active = false;
+            return;
         }
 
-        function hideUpgradePanel() {
-            document.getElementById('upgrade-panel').classList.add('hidden');
-            selectedBuiltTower = null;
+        const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
+
+        if (getDistance(this, this.target) < this.target.radius + 5) {
+            this.hit();
+        }
+    }
+
+    hit() {
+        this.active = false;
+        this.target.hp -= this.type.damage;
+        
+        // 減速效果
+        if (this.type.effect === 'slow') {
+            this.target.slowTimer = 60; // 減速 1 秒 (60幀)
         }
 
-        function doUpgrade() {
-            if(!selectedBuiltTower) return;
-            const def = TOWER_TYPES[selectedBuiltTower.type];
-            const lvlData = def.levels[selectedBuiltTower.level];
+        // 跳傷害數字
+        floatingTexts.push(new FloatingText(this.target.x, this.target.y, `-${this.type.damage}`, '#ffeb3b'));
+
+        // 擊殺判定
+        if (this.target.hp <= 0) {
+            gold += this.target.reward;
+            floatingTexts.push(new FloatingText(this.target.x, this.target.y - 20, `+${this.target.reward}G`, '#4ade80'));
+            updateUI();
+        }
+    }
+
+    draw() {
+        ctx.fillStyle = this.type.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+class FloatingText {
+    constructor(x, y, text, color) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.life = 30;
+    }
+    update() {
+        this.y -= 1;
+        this.life--;
+    }
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = Math.max(0, this.life / 30);
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+/** 遊戲核心邏輯 **/
+function initUI() {
+    // 生成塔選擇按鈕
+    towerContainer.innerHTML = '';
+    for (const key in TOWER_TYPES) {
+        const t = TOWER_TYPES[key];
+        const btn = document.createElement('div');
+        btn.className = 'tower-btn flex items-center p-2 rounded cursor-pointer border-2 border-transparent';
+        btn.innerHTML = `
+            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white mr-3 border-2 border-white" style="background-color: ${t.color}">忍</div>
+            <div class="flex-1">
+                <div class="font-bold text-sm text-white">${t.name} <span class="text-yellow-400 text-xs">(${t.cost}G)</span></div>
+                <div class="text-xs text-gray-400">${t.desc}</div>
+            </div>
+        `;
+        btn.onclick = () => selectTower(key, btn);
+        towerContainer.appendChild(btn);
+    }
+
+    btnUpgrade.onclick = upgradeLord;
+    btnStartWave.onclick = startWave;
+    btnNextLevel.onclick = nextLevel;
+    btnRestart.onclick = restartGame;
+
+    // 畫布點擊放置塔
+    canvas.addEventListener('click', (e) => {
+        if (!selectedTowerType || !waveActive) return; // 戰鬥中才能放塔(或隨時可放)
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        placeTower(x, y);
+    });
+
+    // 滑鼠移動顯示範圍預覽
+    canvas.addEventListener('mousemove', (e) => {
+        if (!selectedTowerType) return;
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+}
+
+let mouseX = -100;
+let mouseY = -100;
+
+function selectTower(typeKey, btnElem) {
+    document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+    if (selectedTowerType === TOWER_TYPES[typeKey]) {
+        selectedTowerType = null; // 取消選擇
+    } else {
+        selectedTowerType = TOWER_TYPES[typeKey];
+        btnElem.classList.add('selected');
+    }
+}
+
+function canPlaceTower(x, y) {
+    const radius = 18;
+    // 檢查金錢
+    if (gold < selectedTowerType.cost) return false;
+    
+    // 檢查是否與其他塔重疊
+    for (let t of towers) {
+        if (getDistance({x, y}, t) < radius * 2 + 5) return false;
+    }
+
+    // 檢查是否壓在路徑上 (路徑寬度大約 40)
+    for (let i = 0; i < currentPath.length - 1; i++) {
+        const distSq = distToSegmentSquared({x, y}, currentPath[i], currentPath[i+1]);
+        if (distSq < (20 + radius) ** 2) return false;
+    }
+    
+    return true;
+}
+
+function placeTower(x, y) {
+    if (canPlaceTower(x, y)) {
+        gold -= selectedTowerType.cost;
+        towers.push(new Tower(x, y, selectedTowerType));
+        updateUI();
+        
+        // 放完後取消選取以防誤觸
+        selectedTowerType = null;
+        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+    }
+}
+
+function upgradeLord() {
+    const cost = lordLevel * 100;
+    if (gold >= cost) {
+        gold -= cost;
+        lordLevel++;
+        lordMaxHp += 20; // 每級+20血量上限
+        lordHp = lordMaxHp; // 升級順便補滿血
+        
+        floatingTexts.push(new FloatingText(400, 300, `君主升級至 Lv.${lordLevel}!`, '#fbbf24'));
+        updateUI();
+    }
+}
+
+function updateUI() {
+    uiGold.innerText = gold;
+    uiLevel.innerText = level;
+    uiLordLevel.innerText = lordLevel;
+    uiHp.innerText = lordHp;
+    uiMaxHp.innerText = lordMaxHp;
+    
+    const hpPercent = Math.max(0, (lordHp / lordMaxHp) * 100);
+    uiHpBar.style.width = hpPercent + '%';
+    
+    // 血量顏色變化
+    if (hpPercent > 50) uiHpBar.className = 'h-4 rounded-full transition-all duration-300 bg-green-500';
+    else if (hpPercent > 20) uiHpBar.className = 'h-4 rounded-full transition-all duration-300 bg-yellow-500';
+    else uiHpBar.className = 'h-4 rounded-full transition-all duration-300 bg-red-600 animate-pulse';
+
+    const cost = lordLevel * 100;
+    uiUpgradeCost.innerText = cost;
+    if (gold < cost) {
+        btnUpgrade.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        btnUpgrade.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    let activeEnemies = enemies.length + enemiesToSpawn;
+    uiEnemies.innerText = activeEnemies;
+}
+
+function loadLevel() {
+    currentPath = PATHS[level - 1];
+    towers = []; // 每關清空防禦塔 (重置佈局，增加策略性)
+    enemies = [];
+    particles = [];
+    floatingTexts = [];
+    
+    // 改變背景色
+    canvas.className = `bg-level-${level}`;
+    
+    waveActive = false;
+    btnStartWave.classList.remove('hidden');
+    overlay.classList.add('hidden');
+    
+    updateUI();
+    draw(); // 初始繪製
+}
+
+function startWave() {
+    if (waveActive) return;
+    waveActive = true;
+    btnStartWave.classList.add('hidden');
+    
+    enemiesToSpawn = 10 + (level * 5); // 隨關卡增加敵人數
+    enemySpawnTimer = 0;
+    
+    if (!isPlaying) {
+        isPlaying = true;
+        gameLoop();
+    }
+}
+
+function drawPath() {
+    ctx.beginPath();
+    ctx.moveTo(currentPath[0].x, currentPath[0].y);
+    for (let i = 1; i < currentPath.length; i++) {
+        ctx.lineTo(currentPath[i].x, currentPath[i].y);
+    }
+    // 路徑底色
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 40;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    
+    // 路徑內線
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 15]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+
+function spawnEnemy() {
+    if (enemiesToSpawn > 0 && enemySpawnTimer <= 0) {
+        enemies.push(new Enemy(currentPath, level));
+        enemiesToSpawn--;
+        enemySpawnTimer = 40 - (level * 1.5); // 隨關卡加快生成速度
+        updateUI();
+    }
+    enemySpawnTimer--;
+}
+
+function showOverlay(title, desc, isGameOver) {
+    waveActive = false;
+    overlay.classList.remove('hidden');
+    document.getElementById('overlay-title').innerText = title;
+    document.getElementById('overlay-desc').innerText = desc;
+    
+    if (isGameOver) {
+        document.getElementById('overlay-title').className = "text-5xl font-bold text-red-500 mb-4";
+        btnNextLevel.classList.add('hidden');
+        btnRestart.classList.remove('hidden');
+    } else {
+        document.getElementById('overlay-title').className = "text-5xl font-bold text-yellow-400 mb-4";
+        btnNextLevel.classList.remove('hidden');
+        btnRestart.classList.add('hidden');
+        if (level === 10) {
+            document.getElementById('overlay-desc').innerText = "你成功守護了忍之國！";
+            btnNextLevel.innerText = "重新遊玩";
+        } else {
+            btnNextLevel.innerText = "進入下一關";
+        }
+    }
+}
+
+function nextLevel() {
+    if (level === 10) {
+        restartGame();
+    } else {
+        level++;
+        gold += 200; // 過關獎勵
+        loadLevel();
+    }
+}
+
+function restartGame() {
+    level = 1;
+    gold = 300;
+    lordLevel = 1;
+    lordMaxHp = 20;
+    lordHp = 20;
+    loadLevel();
+}
+
+function gameLoop() {
+    if (!isPlaying) return;
+    
+    update();
+    draw();
+    
+    frameCount++;
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    if (!waveActive) return;
+
+    spawnEnemy();
+
+    // 更新塔
+    towers.forEach(t => t.update());
+
+    // 更新敵人
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        e.update();
+
+        // 到達終點
+        if (e.waypointIndex >= currentPath.length - 1) {
+            lordHp -= e.damage;
+            enemies.splice(i, 1);
+            updateUI();
             
-            if (lvlData.upCost && money >= lvlData.upCost) {
-                money -= lvlData.upCost;
-                selectedBuiltTower.level++;
-                playSound('upgrade');
+            // 畫面震動效果 (簡單版)
+            canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+            setTimeout(() => canvas.style.transform = 'translate(0,0)', 50);
+
+            if (lordHp <= 0) {
+                lordHp = 0;
                 updateUI();
-                
-                // 更新面板顯示或關閉
-                showUpgradePanel(selectedBuiltTower); 
-            }
-        }
-
-        canvas.addEventListener('click', (e) => {
-            if(gameOver) return;
-            const rect = canvas.getBoundingClientRect();
-            // 考慮 CSS 縮放造成的實際座標差異
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const mouseX = (e.clientX - rect.left) * scaleX;
-            const mouseY = (e.clientY - rect.top) * scaleY;
-            
-            // 1. 檢查是否點擊到現有塔 (升級)
-            let clickedTower = towers.find(t => Math.hypot(t.x - mouseX, t.y - mouseY) < 25);
-            if (clickedTower) {
-                showUpgradePanel(clickedTower);
+                showOverlay("君主倒下...", "會考大魔王摧毀了忍之國", true);
                 return;
-            } else {
-                hideUpgradePanel();
-            }
-
-            // 2. 否則嘗試建塔
-            const gridX = Math.floor(mouseX / GRID_SIZE);
-            const gridY = Math.floor(mouseY / GRID_SIZE);
-            const pixelX = gridX * GRID_SIZE + 25;
-            const pixelY = gridY * GRID_SIZE + 25;
-
-            // 檢查路徑與重疊
-            let onPath = false;
-            for(let i=0; i<path.length-1; i++){
-                let p1 = path[i], p2 = path[i+1];
-                let minX = Math.min(p1.x, p2.x), maxX = Math.max(p1.x, p2.x);
-                let minY = Math.min(p1.y, p2.y), maxY = Math.max(p1.y, p2.y);
-                if(gridX >= minX && gridX <= maxX && gridY >= minY && gridY <= maxY) { onPath = true; break; }
-            }
-            if(onPath || towers.some(t => t.x === pixelX && t.y === pixelY)) return;
-
-            const towerDef = TOWER_TYPES[selectedTowerType];
-            const baseCost = towerDef.levels[0].cost;
-
-            if(money >= baseCost) {
-                money -= baseCost;
-                towers.push({ x: pixelX, y: pixelY, type: selectedTowerType, level: 0, cooldown: 0 });
-                playSound('shoot');
-                updateUI();
-            }
-        });
-
-        function gameLoop() {
-            if(gameOver) return;
-            frameCount++;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawMap(); handleWaveLogic(); handleEnemies(); handleTowers(); handleProjectiles(); updateUI();
-
-            if(lives <= 0) { endGame(false); return; }
-            gameLoopId = requestAnimationFrame(gameLoop);
-        }
-
-        function drawMap() {
-            ctx.lineWidth = 40; ctx.strokeStyle = '#e5e7eb'; ctx.lineJoin = 'round';
-            ctx.beginPath(); ctx.moveTo(pathPoints[0].x, pathPoints[0].y);
-            for(let i=1; i<pathPoints.length; i++) ctx.lineTo(pathPoints[i].x, pathPoints[i].y);
-            ctx.stroke();
-            ctx.font = '24px Arial';
-            ctx.fillText('🚪', pathPoints[0].x - 12, pathPoints[0].y + 8);
-            ctx.fillText('🏫', pathPoints[pathPoints.length-1].x - 12, pathPoints[pathPoints.length-1].y + 8);
-        }
-
-        function handleWaveLogic() {
-            if (!waveActive) return;
-
-            // 魔王學科依據關卡循環
-            const bossConfig = BOSS_SUBJECTS[currentWave % 5];
-            const totalSmallEnemies = 10 + currentWave * 3; // 小兵數量
-
-            if (!bossSpawned) {
-                // 每隔一段時間生小兵
-                if (frameCount % 50 === 0 && smallEnemySpawned < totalSmallEnemies) {
-                    spawnEnemy(false, currentWave);
-                    smallEnemySpawned++;
-                } else if (smallEnemySpawned >= totalSmallEnemies && enemies.length === 0) {
-                    // 魔王降臨
-                    const warnEl = document.getElementById('boss-warning');
-                    warnEl.innerHTML = `⚠️ 第${currentWave + 1}關【${bossConfig.label}期末考】大魔王 來襲！ ⚠️`;
-                    warnEl.classList.remove('hidden', 'border-green-500', 'text-green-600');
-                    warnEl.classList.add('border-red-500', 'text-red-600');
-                    playSound('boss');
-                    
-                    setTimeout(() => { spawnEnemy(true, currentWave, bossConfig); }, 2000);
-                    bossSpawned = true;
-                }
-            } else if (enemies.length === 0) {
-                waveActive = false;
-                const warnEl = document.getElementById('boss-warning');
-                warnEl.innerHTML = `✅ 恭喜攻克【${bossConfig.label}】！準備進入下一階段...`;
-                warnEl.classList.remove('border-red-500', 'text-red-600');
-                warnEl.classList.add('border-green-500', 'text-green-600');
-                warnEl.classList.remove('hidden');
-                
-                currentWave++;
-                setTimeout(() => { warnEl.classList.add('hidden'); startWave(); }, 3500);
             }
         }
-
-        function spawnEnemy(isBoss, waveIndex, bossConfig) {
-            let emoji, hp, speed, size, reward, baseDamage;
-            // 計算玩家對應科目的防禦力影響 (分數越高，敵人越弱，但最低仍有下限)
-            let difficultyMult = 1.0 + (waveIndex * 0.3);
-
-            if (isBoss) {
-                emoji = bossConfig.emoji;
-                // 魔王血量：基礎 * 難度
-                hp = 1200 * difficultyMult; 
-                speed = 0.35 + (waveIndex * 0.03);
-                size = 32; reward = 150 + waveIndex * 30;
-                baseDamage = 10 + waveIndex * 5; 
-            } else {
-                // 隨機抽一個小兵
-                const minion = MINIONS[Math.floor(Math.random() * MINIONS.length)];
-                emoji = minion.emoji;
-                hp = 100 * minion.hpMult * difficultyMult;
-                speed = (1.0 + (Math.random() * 0.3)) * minion.spdMult + (waveIndex * 0.05);
-                size = 14; reward = minion.rwd; baseDamage = 1;
-            }
-            
-            enemies.push({
-                x: pathPoints[0].x, y: pathPoints[0].y, pathIndex: 0,
-                hp: hp, maxHp: hp, speed: speed, baseSpeed: speed,
-                size: size, reward: reward, isBoss: isBoss, emoji: emoji,
-                baseDamage: baseDamage, slowTimer: 0, slowFactor: 1.0
-            });
+        // 死亡
+        else if (e.hp <= 0) {
+            enemies.splice(i, 1);
+            updateUI();
         }
+    }
 
-        function handleEnemies() {
-            for(let i = enemies.length - 1; i >= 0; i--) {
-                let e = enemies[i];
-                if(e.slowTimer > 0) { e.slowTimer--; e.speed = e.baseSpeed * e.slowFactor; } 
-                else { e.speed = e.baseSpeed; }
+    // 更新投射物
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        if (!particles[i].active) particles.splice(i, 1);
+    }
 
-                let target = pathPoints[e.pathIndex + 1];
-                if(target) {
-                    let dx = target.x - e.x, dy = target.y - e.y, dist = Math.hypot(dx, dy);
-                    if(dist < e.speed) { e.x = target.x; e.y = target.y; e.pathIndex++; } 
-                    else { e.x += (dx / dist) * e.speed; e.y += (dy / dist) * e.speed; }
-                } else {
-                    lives -= e.baseDamage; playSound('hit');
-                    enemies.splice(i, 1); continue;
-                }
+    // 更新漂浮文字
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        floatingTexts[i].update();
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
 
-                ctx.font = `${e.size * 2}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(e.emoji, e.x, e.y);
-                
-                ctx.fillStyle = 'red'; ctx.fillRect(e.x - e.size, e.y - e.size - 10, e.size * 2, 5);
-                ctx.fillStyle = '#22c55e'; ctx.fillRect(e.x - e.size, e.y - e.size - 10, (e.size * 2) * (e.hp / e.maxHp), 5);
-            }
-        }
+    // 檢查過關
+    if (enemies.length === 0 && enemiesToSpawn === 0) {
+        showOverlay(`第 ${level} 關 通過！`, `成功抵擋了會考魔王的進攻`, false);
+    }
+}
 
-        function handleTowers() {
-            towers.forEach(t => {
-                const def = TOWER_TYPES[t.type];
-                const lvlData = def.levels[t.level];
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawPath();
 
-                // 塔基底
-                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(t.x, t.y, 18, 0, Math.PI * 2); ctx.fill();
-                ctx.lineWidth = 3; ctx.strokeStyle = def.color; ctx.stroke();
-                ctx.font = '22px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(def.emoji, t.x, t.y);
-                
-                // 畫稱號 (超可愛顯示在上方)
-                ctx.font = 'bold 12px "Noto Sans TC"';
-                ctx.fillStyle = def.color;
-                // 添加一點陰影讓字體更明顯
-                ctx.shadowColor = "white"; ctx.shadowBlur = 4;
-                ctx.fillText(lvlData.rank, t.x, t.y - 28);
-                ctx.shadowBlur = 0; // 重置
+    // 畫預覽放置範圍
+    if (selectedTowerType && mouseX > 0 && mouseY > 0) {
+        const canPlace = canPlaceTower(mouseX, mouseY);
+        
+        // 攻擊範圍圈
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, selectedTowerType.range, 0, Math.PI * 2);
+        ctx.fillStyle = canPlace ? 'rgba(255, 255, 255, 0.1)' : 'rgba(239, 68, 68, 0.2)';
+        ctx.fill();
+        ctx.strokeStyle = canPlace ? 'rgba(255, 255, 255, 0.5)' : 'rgba(239, 68, 68, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
-                // 選擇光環
-                if(selectedBuiltTower === t) {
-                    ctx.beginPath(); ctx.arc(t.x, t.y, lvlData.range, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fill();
-                    ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
-                }
+        // 塔本體預覽
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, 18, 0, Math.PI * 2);
+        ctx.fillStyle = selectedTowerType.color;
+        ctx.globalAlpha = 0.5;
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
 
-                if(t.cooldown > 0) t.cooldown--;
-                
-                if(t.cooldown <= 0) {
-                    let target = enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) <= lvlData.range);
-                    if(target) {
-                        // 依照玩家該科能力加成傷害 (每1分加1%傷害)
-                        const playerBonus = 1 + (currentPlayer.stats[t.type] || 60) / 100;
-                        projectiles.push({
-                            x: t.x, y: t.y, target: target, type: t.type,
-                            damage: lvlData.dmg * playerBonus,
-                            speed: 8, color: def.color,
-                            slow: lvlData.slow || null
-                        });
-                        if (t.type === 'project') {
-                            // 專題創作連發特效
-                            setTimeout(() => playSound('shoot'), 50);
-                        } else {
-                            playSound('shoot');
-                        }
-                        t.cooldown = lvlData.rate;
-                    }
-                }
-            });
-        }
+    // 依序繪製物件
+    towers.forEach(t => t.draw());
+    enemies.forEach(e => e.draw());
+    particles.forEach(p => p.draw());
+    floatingTexts.forEach(ft => ft.draw());
+}
 
-        function handleProjectiles() {
-            for(let i = projectiles.length - 1; i >= 0; i--) {
-                let p = projectiles[i];
-                if(!enemies.includes(p.target)) { projectiles.splice(i, 1); continue; }
+/** 初始化遊戲 **/
+window.onload = () => {
+    initUI();
+    loadLevel();
+};
 
-                let dx = p.target.x - p.x, dy = p.target.y - p.y, dist = Math.hypot(dx, dy);
-                if(dist < p.speed) {
-                    p.target.hp -= p.damage;
-                    
-                    if(p.slow) {
-                        p.target.slowTimer = 90; // 緩速 1.5 秒
-                        p.target.slowFactor = p.slow; 
-                    }
-                    
-                    if(p.target.hp <= 0) {
-                        money += p.target.reward;
-                        let idx = enemies.indexOf(p.target);
-                        if(idx > -1) enemies.splice(idx, 1);
-                    }
-                    projectiles.splice(i, 1);
-                } else {
-                    p.x += (dx / dist) * p.speed; p.y += (dy / dist) * p.speed;
-                    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
-                }
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('ui-money').innerText = money;
-            document.getElementById('ui-lives').innerText = Math.max(0, lives);
-            
-            let displayWave = Math.min(10, currentWave + 1);
-            if(bossSpawned) {
-                document.getElementById('ui-wave').innerHTML = `期末考<br><span class="text-sm">(${displayWave}/10)</span>`;
-                document.getElementById('ui-wave').className = "text-xl text-red-400 animate-pulse";
-            } else {
-                document.getElementById('ui-wave').innerText = `${displayWave}/10`;
-                document.getElementById('ui-wave').className = "text-2xl text-cyan-400";
-            }
-        }
-
-        /* ==========================================
-           3. 結算與存檔
-           ========================================== */
-        function endGame(isWin) {
-            gameOver = true; document.getElementById('boss-warning').classList.add('hidden');
-            hideUpgradePanel(); showScreen('result-screen');
-            document.getElementById('result-player').innerText = `玩家：${currentPlayer.name} (${currentPlayer.levelStr})`;
-            const titleEl = document.getElementById('result-title');
-            
-            if(isWin) {
-                playSound('boss'); // 暫代勝利音效
-                titleEl.innerText = "🎉 傳說誕生！擊破全十關！"; titleEl.className = "text-3xl font-black text-green-600 mb-2";
-            } else {
-                playSound('hit');
-                titleEl.innerText = `💥 防線崩潰...止步於第 ${currentWave + 1} 關`; titleEl.className = "text-3xl font-black text-red-600 mb-2";
-            }
-        }
-
-        async function saveDataAndRestart() {
-            const gameData = {
-                playerName: currentPlayer.name,
-                result: lives > 0 ? 'WIN_10' : `LOSE_AT_WAVE_${currentWave + 1}`,
-                remainingLives: lives, moneyEarned: money, timestamp: new Date().toISOString()
-            };
-            const saveBtn = document.getElementById('save-btn');
-            saveBtn.innerText = "資料上傳中..."; saveBtn.disabled = true;
-
-            try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(gameData), headers: { "Content-Type": "text/plain;charset=utf-8" } });
-                alert(`✅ 戰績存檔成功！\n階級：${currentPlayer.levelStr}\n最終關卡：${currentWave + 1}`);
-            } catch (error) { alert("❌ 儲存失敗，請檢查網路連線。"); }
-            
-            saveBtn.innerText = "儲存紀錄並返回"; saveBtn.disabled = false;
-            document.getElementById('player-name').value = ''; showScreen('login-screen');
-        }
-
-    </script>
+</script>
 </body>
 </html>
